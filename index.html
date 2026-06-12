@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0f0f0f" />
+<title>SBO Veda-3</title>
+
+<!-- ===== PWA: Add to Home Screen (iOS + Android) ===== -->
+<link rel="manifest" href="manifest.json" />
+
+<!-- iOS Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SBO Veda-3" />
+<link rel="apple-touch-icon" href="icon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="icon.png" />
+<link rel="apple-touch-startup-image" href="icon.png" />
+
+<!-- Android / General -->
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="application-name" content="SBO Veda-3" />
+<link rel="icon" type="image/png" href="icon.png" />
+<!-- ===== END PWA ===== -->
+<style>
+  /* ============ THEME TOKENS ============ */
+  :root {
+    --bg: #0f0f0f;
+    --card: #1a1a1a;
+    --input-bg: #242424;
+    --border: #2a2a2a;
+    --accent: #2979ff;
+    --critical: #ff3b30;
+    --major: #ff9500;
+    --minor: #34c759;
+    --text: #ffffff;
+    --text-secondary: #888888;
+    --purple: #8b5cf6;
+    --overlay: rgba(0,0,0,0.6);
+    --radius-card: 16px;
+    --radius-input: 12px;
+  }
+  html.light {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --input-bg: #efefef;
+    --border: #e0e0e0;
+    --text: #000000;
+    --text-secondary: #888888;
+    --overlay: rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.2s ease, color 0.2s ease;
+    overscroll-behavior: none;
+  }
+  body { -webkit-font-smoothing: antialiased; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea { font-family: inherit; }
+  .hidden { display: none !important; }
+
+  /* ============ LANGUAGE SLIDER TOGGLE (shared component) ============ */
+  .lang-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 86px;
+    height: 32px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+  .lang-toggle .lang-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    height: calc(100% - 4px);
+    background: var(--accent);
+    border-radius: 999px;
+    transition: transform 0.2s ease;
+    z-index: 1;
+  }
+  /* slide right when ID active */
+  .lang-toggle[data-lang="id"] .lang-thumb { transform: translateX(100%); }
+  .lang-toggle .lang-label {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+  }
+  .lang-toggle[data-lang="en"] .lang-en { color: #fff; }
+  .lang-toggle[data-lang="id"] .lang-id { color: #fff; }
+
+  /* ============ LOGIN SCREEN ============ */
+  #loginScreen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background: var(--bg);
+    z-index: 10;
+  }
+  #loginScreen .login-lang {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 20px);
+    right: 20px;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--card);
+    border-radius: var(--radius-card);
+    padding: 32px 24px;
+    border: 1px solid var(--border);
+  }
+  .login-logo {
+    width: 72px; height: 72px;
+    margin: 0 auto 16px;
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--input-bg);
+    font-size: 36px;
+    overflow: hidden;
+    animation: logoPop 0.8s cubic-bezier(0.68,-0.55,0.265,1.55) both;
+  }
+  .login-logo img { width: 100%; height: 100%; object-fit: cover; animation: logoPop 0.8s cubic-bezier(0.68,-0.55,0.265,1.55) both; }
+  .login-card { animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+  .login-card .field:nth-of-type(1) { animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.08s both; }
+  .login-card .field:nth-of-type(2) { animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.16s both; }
+  #loginBtn { animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.24s both; }
+  .login-card h1 { text-align: center; font-size: 24px; margin: 0 0 4px; font-weight: 800; }
+  .login-card .subtitle { text-align: center; color: var(--text-secondary); font-size: 13px; margin: 0 0 24px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; }
+  .text-input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-input);
+    color: var(--text);
+    padding: 13px 14px;
+    font-size: 15px;
+    outline: none;
+    transition: border 0.2s ease;
+  }
+  .text-input:focus { border-color: var(--accent); }
+  .text-input.invalid { border-color: var(--critical); }
+  .photo-upload-row.invalid { outline: 1.5px solid var(--critical); outline-offset: 4px; border-radius: var(--radius-input); }
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-secondary); padding: 4px;
+  }
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--radius-input);
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 8px;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .error-msg { color: var(--critical); font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
+
+  /* ============ SPINNER ============ */
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(255,255,255,0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--overlay);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .loading-overlay .spinner { border-color: rgba(255,255,255,0.25); border-top-color: var(--accent); }
+
+  /* ============ MAIN APP ============ */
+  #app { display: flex; flex-direction: column; height: 100%; }
+  .topbar {
+    position: sticky; top: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 5;
+  }
+  .topbar h2 { font-size: 17px; font-weight: 800; margin: 0; }
+  .icon-btn { padding: 6px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+  }
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 120px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab-page { display: none; }
+  .tab-page.active {
+    display: block;
+    animation: fadeSlideUp 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  .nav-tab { position: relative; }
+  .nav-tab svg, .nav-tab span { transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), color 0.2s ease; }
+  .nav-tab.active svg { transform: translateY(-2px) scale(1.12); filter: drop-shadow(0 2px 8px rgba(41,121,255,0.5)); }
+  .nav-tab.active span { transform: scale(1.04); }
+
+  /* ============ OBSERVATION CARD ============ */
+  @keyframes cardEnter { from { opacity:0; transform: translateY(24px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+  @keyframes fadeSlideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes logoPop { 0%{transform:scale(0) rotate(-20deg);opacity:0;} 60%{transform:scale(1.15) rotate(5deg);opacity:1;} 100%{transform:scale(1) rotate(0);opacity:1;} }
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 6px 20px rgba(41,121,255,0.45); } 50% { box-shadow: 0 6px 32px rgba(41,121,255,0.7); } }
+  @keyframes aiPulseGlow { 0%,100% { box-shadow: 0 6px 18px rgba(139,92,246,0.5); } 50% { box-shadow: 0 6px 30px rgba(139,92,246,0.85); } }
+
+  .obs-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 14px 14px 14px 18px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease, border-color 0.25s ease;
+    animation: cardEnter 0.45s cubic-bezier(0.22,1,0.36,1) both;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  }
+  .obs-card:active { transform: scale(0.97); }
+  .obs-card:hover { box-shadow: 0 8px 28px rgba(41,121,255,0.18); border-color: rgba(41,121,255,0.35); }
+  .obs-card .obs-top { display: flex; gap: 12px; margin-bottom: 10px; }
+  .obs-card .obs-photo {
+    width: 96px; height: 96px; flex-shrink: 0; border-radius: 12px; overflow: hidden;
+    background: var(--input-bg); cursor: pointer; position: relative;
+  }
+  .obs-card .obs-photo img { width: 100%; height: 100%; object-fit: cover; display:block; transition: transform 0.4s cubic-bezier(0.22,1,0.36,1); }
+  .obs-card .obs-photo:active img { transform: scale(1.04); }
+  .obs-card .obs-photo .photo-count {
+    position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.6); color:#fff;
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; backdrop-filter: blur(4px);
+  }
+  .obs-card .obs-info { flex: 1; min-width: 0; padding-right: 70px; }
+  .obs-card .obs-info .obs-reporter { margin: 0 0 2px; padding-right: 70px; }
+  .obs-card .obs-info .obs-meta { margin-bottom: 4px; }
+  .obs-card .obs-info .obs-loc { margin-bottom: 4px; }
+  .obs-card .obs-info .obs-breadcrumb { margin-bottom: 0; }
+
+  /* ============ FULLSCREEN IMAGE VIEWER ============ */
+  .img-viewer {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .img-viewer.show { opacity: 1; pointer-events: auto; }
+  .img-viewer img {
+    max-width: 92%; max-height: 86%; border-radius: 12px;
+    transform: scale(0.85); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .img-viewer.show img { transform: scale(1); }
+  .img-viewer .iv-close {
+    position: absolute; top: calc(env(safe-area-inset-top, 0px) + 16px); right: 18px;
+    width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.12);
+    color: #fff; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px);
+  }
+  .img-viewer .iv-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12);
+    color: #fff; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px);
+  }
+  .img-viewer .iv-prev { left: 14px; }
+  .img-viewer .iv-next { right: 14px; }
+  .img-viewer .iv-counter {
+    position: absolute; bottom: calc(env(safe-area-inset-bottom,0px) + 18px); left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.12); padding: 5px 14px; border-radius: 999px; backdrop-filter: blur(6px);
+  }
+  .photo-thumb, .photo-up-thumb { cursor: pointer; transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+  .photo-thumb:active, .photo-up-thumb:active { transform: scale(0.95); }
+  .obs-strip { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .strip-critical { background: var(--critical); }
+  .strip-major { background: var(--major); }
+  .strip-minor { background: var(--minor); }
+  .badge {
+    position: absolute; top: 14px; right: 14px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: #fff;
+  }
+  .badge-critical { background: var(--critical); }
+  .badge-major { background: var(--major); }
+  .badge-minor { background: var(--minor); }
+  .badge-fixed { background: var(--minor); }
+  .obs-reporter { font-weight: 700; font-size: 15px; margin: 0 70px 2px 0; }
+  .obs-meta { color: var(--text-secondary); font-size: 12px; margin-bottom: 6px; }
+  .obs-loc { display: flex; align-items: center; gap: 4px; font-size: 13px; margin-bottom: 6px; }
+  .obs-loc svg { color: var(--accent); flex-shrink: 0; }
+  .obs-breadcrumb { color: var(--text-secondary); font-size: 11px; margin-bottom: 6px; }
+  .obs-desc {
+    font-size: 13px; line-height: 1.45; color: var(--text);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .obs-time { text-align: right; color: var(--text-secondary); font-size: 11px; margin-top: 8px; }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-secondary);
+  }
+  .empty-state .empty-ill {
+    width: 80px; height: 80px; margin: 0 auto 16px;
+    border-radius: 20px; background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .empty-state p { font-size: 14px; margin: 0; }
+
+  /* ============ BOTTOM NAV ============ */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 6;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 10px 0;
+    color: var(--text-secondary);
+    font-size: 10px; font-weight: 600;
+    transition: color 0.2s ease;
+  }
+  .nav-tab.active { color: var(--accent); }
+  .fab {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+    left: 50%; transform: translateX(-50%);
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(41,121,255,0.45);
+    z-index: 7;
+    transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+    animation: pulseGlow 2.6s ease-in-out infinite;
+  }
+  .fab:active { transform: translateX(-50%) scale(0.88) rotate(90deg); }
+
+  /* ============ ASK AI FLOATING BUTTON ============ */
+  .ai-fab {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
+    right: 18px;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--purple) 0%, #a78bfa 100%);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    font-size: 14px; font-weight: 800; letter-spacing: 0.3px;
+    box-shadow: 0 6px 18px rgba(139,92,246,0.5);
+    z-index: 7;
+    transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+    animation: aiPulseGlow 2.6s ease-in-out infinite;
+  }
+  .ai-fab svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .ai-fab:active { transform: scale(0.92); }
+
+  /* ============ DRAWER (settings) ============ */
+  .overlay-bg {
+    position: fixed; inset: 0;
+    background: var(--overlay);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 50;
+  }
+  .overlay-bg.show { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: 80%; max-width: 320px;
+    background: var(--card);
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    z-index: 60;
+    padding: calc(env(safe-area-inset-top, 0px) + 24px) 20px 24px;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .drawer.show { transform: translateX(0); }
+  .drawer-user {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  }
+  .drawer-user .avatar { width: 48px; height: 48px; font-size: 20px; }
+  .drawer-user .du-name { font-weight: 700; font-size: 16px; }
+  .admin-badge {
+    display: inline-block; margin-top: 3px;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+  .drawer-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 0; font-size: 15px;
+  }
+  .drawer-row .dr-left { display: flex; align-items: center; gap: 12px; }
+  .drawer-row.danger { color: var(--critical); }
+  .app-version { margin-top: auto; text-align: center; color: var(--text-secondary); font-size: 12px; padding-top: 20px; }
+
+  /* iOS switch */
+  .switch { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+  .switch input { display: none; }
+  .switch .slider {
+    position: absolute; inset: 0; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 999px; transition: background 0.2s ease;
+  }
+  .switch .slider::before {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 22px; height: 22px; border-radius: 50%; background: #fff;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(20px) scale(1.05); }
+
+  /* ============ BOTTOM SHEET (detail / form / modals) ============ */
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 70;
+    max-height: 92%;
+    display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.35);
+  }
+  .sheet.show { transform: translateY(0); }
+  .sheet.fullscreen { top: 0; max-height: 100%; border-radius: 0; }
+  .drag-handle { width: 40px; height: 4px; border-radius: 999px; background: var(--border); margin: 10px auto 4px; flex-shrink: 0; }
+  .sheet-body { overflow-y: auto; padding: 8px 20px 24px; -webkit-overflow-scrolling: touch; }
+  .sheet-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    flex-shrink: 0;
+  }
+  .sheet-header .sh-title { font-weight: 800; font-size: 17px; }
+  .sheet-header button { font-size: 15px; font-weight: 600; }
+  .sheet-header .sh-save { color: var(--accent); }
+
+  /* detail */
+  .detail-badge { font-size: 13px; padding: 6px 14px; border-radius: 999px; color: #fff; font-weight: 800; display: inline-block; margin-bottom: 14px; }
+  .detail-row { margin-bottom: 14px; }
+  .detail-row .dl { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; font-weight: 700; }
+  .detail-row .dv { font-size: 15px; line-height: 1.5; }
+  .photo-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .photo-thumb {
+    width: 80px; height: 80px; border-radius: 12px; flex-shrink: 0;
+    background: var(--input-bg); display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); overflow: hidden;
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .btn-fixed { width: 100%; background: var(--minor); color: #fff; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; margin-top: 10px; }
+
+  /* ============ FORM ============ */
+  .form-field { margin-bottom: 18px; }
+  .form-field > label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+  .locked-input { background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-input); padding: 13px 14px; color: var(--text-secondary); font-size: 15px; }
+  textarea.text-input { resize: none; line-height: 1.5; }
+
+  /* custom dropdown */
+  .dropdown { position: relative; }
+  .dropdown-trigger {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: var(--radius-input); padding: 13px 14px; font-size: 15px;
+    display: flex; align-items: center; justify-content: space-between; text-align: left;
+    color: var(--text); transition: border 0.2s ease;
+  }
+  .dropdown-trigger.placeholder { color: var(--text-secondary); }
+  .dropdown-trigger.invalid { border-color: var(--critical); }
+  .dropdown-trigger svg { color: var(--text-secondary); transition: transform 0.2s ease; }
+  .dropdown.open .dropdown-trigger svg { transform: rotate(180deg); }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-input);
+    max-height: 240px; overflow-y: auto; z-index: 20;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    display: none;
+    transform-origin: top center;
+  }
+  .dropdown.open .dropdown-menu {
+    display: block;
+    animation: dropPop 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes dropPop { from { opacity:0; transform: scale(0.96) translateY(-6px); } to { opacity:1; transform: scale(1) translateY(0); } }
+  .dropdown-option { padding: 13px 14px; font-size: 15px; transition: background 0.15s ease, padding-left 0.15s ease; }
+  .dropdown-option:active, .dropdown-option:hover { background: var(--input-bg); padding-left: 18px; }
+  .dropdown-option.selected { color: var(--accent); font-weight: 700; }
+
+  button.btn-primary:active, button.dropdown-trigger:active, .risk-btn:active, .nav-tab:active, .icon-btn:active {
+    transform: scale(0.96);
+  }
+  .btn-primary, .dropdown-trigger, .risk-btn { transition: all 0.18s cubic-bezier(0.34,1.56,0.64,1); }
+
+  /* risk buttons */
+  .risk-group { display: flex; gap: 10px; }
+  .risk-btn {
+    flex: 1; padding: 13px 0; border-radius: var(--radius-input); font-weight: 700; font-size: 14px;
+    border: 1.5px solid; background: transparent; transition: all 0.2s ease;
+  }
+  .risk-btn.minor { color: var(--minor); border-color: var(--minor); }
+  .risk-btn.major { color: var(--major); border-color: var(--major); }
+  .risk-btn.critical { color: var(--critical); border-color: var(--critical); }
+  .risk-btn.minor.sel { background: var(--minor); color: #fff; }
+  .risk-btn.major.sel { background: var(--major); color: #fff; }
+  .risk-btn.critical.sel { background: var(--critical); color: #fff; }
+  .risk-group.invalid { outline: 1.5px solid var(--critical); outline-offset: 4px; border-radius: var(--radius-input); }
+
+  /* photo upload thumbs */
+  .photo-upload-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .photo-add {
+    width: 70px; height: 70px; border-radius: 12px; border: 1.5px dashed var(--border);
+    display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
+    background: var(--input-bg);
+  }
+  .photo-up-thumb { position: relative; width: 70px; height: 70px; border-radius: 12px; overflow: hidden; background: var(--input-bg); }
+  .photo-up-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-up-thumb .rm {
+    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(0,0,0,0.7); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+
+  /* ============ TOAST ============ */
+  #toastWrap {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 300; pointer-events: none;
+  }
+  .toast {
+    padding: 12px 20px; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 600;
+    transform: translateY(-80px) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+  .toast.show { transform: translateY(0) scale(1); opacity: 1; }
+  .toast.success { background: var(--minor); }
+  .toast.error { background: var(--critical); }
+  .toast.info { background: var(--accent); }
+
+  /* ============ AI CHAT MODAL ============ */
+  #aiModal { z-index: 80; }
+  .ai-header { background: var(--card); }
+  .ai-header .sh-title { color: var(--purple); }
+  .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .bubble { max-width: 80%; padding: 11px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; animation: bubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .bubble.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .bubble.ai { align-self: flex-start; background: var(--input-bg); color: var(--text); border-bottom-left-radius: 4px; }
+  .typing { display: flex; gap: 4px; align-self: flex-start; padding: 14px; }
+  .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--text-secondary); animation: blink 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  @keyframes bubblePop { from { opacity:0; transform: translateY(10px) scale(0.95); } to { opacity:1; transform: translateY(0) scale(1); } }
+  .chat-input-bar {
+    display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); flex-shrink: 0; background: var(--card);
+  }
+  .chat-input-bar input { flex: 1; }
+  .chat-send { width: 46px; background: var(--purple); border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* search */
+  .search-bar-wrap { position: relative; margin-bottom: 14px; }
+  .search-bar-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+  .search-bar-wrap input { padding-left: 42px; }
+  .filter-toggle { display: flex; background: var(--input-bg); border-radius: 999px; padding: 4px; margin-bottom: 16px; }
+  .filter-opt { flex: 1; text-align: center; padding: 8px 0; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s ease; }
+  .filter-opt.active { background: var(--accent); color: #fff; }
+
+  /* modal small (photo source / confirm / bug) */
+  .modal-sheet { padding: 8px 20px 24px; }
+  .modal-opt { display: flex; align-items: center; gap: 14px; padding: 16px 4px; font-size: 16px; border-bottom: 1px solid var(--border); }
+  .modal-opt:last-of-type { border-bottom: none; }
+  .modal-opt svg { color: var(--accent); }
+  .btn-secondary { width: 100%; background: var(--input-bg); color: var(--text); padding: 14px; border-radius: 12px; font-weight: 700; margin-top: 12px; }
+  .confirm-title { font-size: 17px; font-weight: 700; text-align: center; margin: 16px 0 24px; line-height: 1.4; }
+  .confirm-btns { display: flex; gap: 12px; }
+  .confirm-btns button { flex: 1; padding: 14px; border-radius: 12px; font-weight: 700; }
+  .btn-cancel { background: var(--input-bg); color: var(--text); }
+  .btn-confirm { background: var(--accent); color: #fff; }
+  .btn-danger { background: var(--critical); color: #fff; }
+
+  .success-screen { text-align: center; padding: 60px 20px; }
+  .success-check { width: 80px; height: 80px; border-radius: 50%; background: var(--minor); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ============ TOASTS ============ -->
+<div id="toastWrap"></div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen">
+  <div class="login-lang">
+    <!-- shared language slider toggle -->
+    <div class="lang-toggle" data-lang="en" id="loginLangToggle" role="switch" aria-label="Language">
+      <div class="lang-thumb"></div>
+      <span class="lang-label lang-en">EN</span>
+      <span class="lang-label lang-id">ID</span>
+    </div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo" id="loginLogo">🛡️</div>
+    <h1>SBO Veda-3</h1>
+    <p class="subtitle" data-i18n="company">PT. Alliance Consumer Products Indonesia</p>
+    <div class="field">
+      <label data-i18n="username">Username</label>
+      <input class="text-input" id="loginUser" type="text" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label data-i18n="password">Password</label>
+      <div class="pw-wrap">
+        <input class="text-input" id="loginPass" type="password" autocomplete="current-password" />
+        <button class="pw-toggle" id="pwToggle" type="button" aria-label="Show password">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="btn-primary" id="loginBtn" data-i18n="login">Login</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <button class="icon-btn" id="menuBtn" aria-label="Menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <h2>SBO Veda-3</h2>
+    <div class="avatar" id="topAvatar">U</div>
+  </header>
+
+  <main class="content">
+    <!-- ME TAB -->
+    <section class="tab-page active" id="page-me">
+      <div id="list-me"></div>
+    </section>
+    <!-- EVERYONE TAB -->
+    <section class="tab-page" id="page-everyone">
+      <div id="list-everyone"></div>
+    </section>
+    <!-- SEARCH TAB -->
+    <section class="tab-page" id="page-search">
+      <div class="search-bar-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="text-input" id="searchInput" data-i18n-ph="searchPlaceholder" placeholder="Search..." />
+      </div>
+      <div class="filter-toggle" id="searchFilter">
+        <div class="filter-opt" data-filter="open" data-i18n="filterOpen">Open</div>
+        <div class="filter-opt active" data-filter="all" data-i18n="filterAll">All</div>
+        <div class="filter-opt" data-filter="fixed" data-i18n="filterFixed">Fixed</div>
+      </div>
+      <div id="list-search"></div>
+    </section>
+    <!-- FIXED TAB -->
+    <section class="tab-page" id="page-fixed">
+      <div id="list-fixed"></div>
+    </section>
+  </main>
+
+  <!-- ASK AI FAB -->
+  <button class="ai-fab" id="aiFab" aria-label="Ask AI">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.8L20 9.7l-5.1 3.7L16.8 19 12 15.3 7.2 19l1.9-5.6L4 9.7l6.1-1.9z"/></svg>
+    <span>Ask AI</span>
+  </button>
+
+  <!-- FAB -->
+  <button class="fab" id="addFab" aria-label="New observation">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-tab active" data-tab="me">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>
+      <span data-i18n="tabMe">Me</span>
+    </button>
+    <button class="nav-tab" data-tab="everyone">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2 20v-1a6 6 0 0 1 12 0v1"/><circle cx="17" cy="9" r="2.5"/><path d="M15 20v-1a5 5 0 0 1 7-4.5"/></svg>
+      <span data-i18n="tabEveryone">Everyone</span>
+    </button>
+    <button class="nav-tab" data-tab="search">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span data-i18n="tabSearch">Search</span>
+    </button>
+    <button class="nav-tab" data-tab="fixed">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      <span data-i18n="tabFixed">Fixed</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ============ SETTINGS DRAWER ============ -->
+<div class="overlay-bg" id="drawerOverlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-user">
+    <div class="avatar" id="drawerAvatar">U</div>
+    <div>
+      <div class="du-name" id="drawerName">User</div>
+      <span class="admin-badge hidden" id="drawerAdminBadge">Admin</span>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="drawer-row">
+    <div class="dr-left">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 0 12 6 6 0 0 1 0 6 9 9 0 0 0 0-18z"/></svg>
+      <span data-i18n="darkMode">Dark Mode</span>
+    </div>
+    <label class="switch"><input type="checkbox" id="darkToggle" checked><span class="slider"></span></label>
+  </div>
+  <div class="drawer-row">
+    <div class="dr-left">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      <span data-i18n="language">Language</span>
+    </div>
+    <!-- shared language slider toggle (synced with login) -->
+    <div class="lang-toggle" data-lang="en" id="drawerLangToggle" role="switch" aria-label="Language">
+      <div class="lang-thumb"></div>
+      <span class="lang-label lang-en">EN</span>
+      <span class="lang-label lang-id">ID</span>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="drawer-row" id="reportIssueRow">
+    <div class="dr-left">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 6V3M5 9H2M22 9h-3M5 16H2M22 16h-3M8 9 5 6M16 9l3-3"/></svg>
+      <span data-i18n="reportIssue">Report an Issue</span>
+    </div>
+  </div>
+  <div class="drawer-row danger" id="logoutRow">
+    <div class="dr-left">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span data-i18n="logout">Logout</span>
+    </div>
+  </div>
+  <div class="app-version">SBO Veda-3 v3.0</div>
+</aside>
+
+<!-- ============ DETAIL BOTTOM SHEET ============ -->
+<div class="overlay-bg" id="detailOverlay"></div>
+<div class="sheet" id="detailSheet">
+  <div class="drag-handle"></div>
+  <div class="sheet-body" id="detailBody"></div>
+</div>
+
+<!-- ============ NEW OBSERVATION FORM ============ -->
+<div class="overlay-bg" id="formOverlay"></div>
+<div class="sheet fullscreen" id="formSheet">
+  <div class="sheet-header">
+    <button id="formCancel" data-i18n="cancel">Cancel</button>
+    <span class="sh-title" data-i18n="newObs">New Observation</span>
+    <button class="sh-save" id="formSave" data-i18n="save">Save</button>
+  </div>
+  <div class="sheet-body" id="formBody">
+    <!-- 1. Reporter -->
+    <div class="form-field">
+      <label data-i18n="reporterName">Reporter Name</label>
+      <div class="locked-input" id="formReporter">—</div>
+    </div>
+    <!-- 2. Photos -->
+    <div class="form-field">
+      <label data-i18n="photoEvidence">Photo Evidence</label>
+      <div class="photo-upload-row" id="photoUploadRow">
+        <button class="photo-add" id="photoAddBtn" type="button">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- 3. Department -->
+    <div class="form-field" id="ff-dept"></div>
+    <!-- 4. Shift -->
+    <div class="form-field" id="ff-shift"></div>
+    <!-- 5. Location -->
+    <div class="form-field" id="ff-location"></div>
+    <div class="form-field hidden" id="ff-otherLocation">
+      <label data-i18n="otherLocation">Other Location</label>
+      <input class="text-input" id="otherLocationInput" />
+    </div>
+    <!-- 6. Location details -->
+    <div class="form-field">
+      <label data-i18n="locationDetails">Location Details</label>
+      <textarea class="text-input" rows="2" id="locDetailsInput" data-i18n-ph="locationDetailsPh" placeholder="Add more location details..."></textarea>
+    </div>
+    <!-- 7. Finding type cascade -->
+    <div class="form-field" id="ff-findingType"></div>
+    <div class="form-field hidden" id="ff-category"></div>
+    <div class="form-field hidden" id="ff-categoryOther">
+      <label data-i18n="specifyOther">Specify Other</label>
+      <input class="text-input" id="categoryOtherInput" />
+    </div>
+    <div class="form-field hidden" id="ff-sub3"></div>
+    <div class="form-field hidden" id="ff-sub3Other">
+      <label data-i18n="specifyOther">Specify Other</label>
+      <input class="text-input" id="sub3OtherInput" />
+    </div>
+    <!-- 8. Description -->
+    <div class="form-field">
+      <label data-i18n="findingDesc">Finding Description</label>
+      <textarea class="text-input" rows="4" id="descInput" data-i18n-ph="findingDescPh" placeholder="Describe the finding in detail..."></textarea>
+    </div>
+    <!-- 9. Recommendation -->
+    <div class="form-field">
+      <label data-i18n="recommendation">Recommendation</label>
+      <textarea class="text-input" rows="3" id="recInput" data-i18n-ph="recommendationPh" placeholder="What should be done to fix this?"></textarea>
+    </div>
+    <!-- 10. Risk -->
+    <div class="form-field">
+      <label data-i18n="riskLevel">Risk Level</label>
+      <div class="risk-group" id="riskGroup">
+        <button type="button" class="risk-btn minor" data-risk="minor" data-i18n="minor">Minor</button>
+        <button type="button" class="risk-btn major" data-risk="major" data-i18n="major">Major</button>
+        <button type="button" class="risk-btn critical" data-risk="critical" data-i18n="critical">Critical</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AI CHAT MODAL ============ -->
+<div class="sheet fullscreen" id="aiModal">
+  <div class="sheet-header ai-header">
+    <span style="width:40px"></span>
+    <span class="sh-title">Veda AI</span>
+    <button id="aiClose" aria-label="Close">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="chat-area" id="chatArea"></div>
+  <div class="chat-input-bar">
+    <input class="text-input" id="chatInput" data-i18n-ph="askVeda" placeholder="Ask Veda AI..." />
+    <button class="chat-send" id="chatSend" aria-label="Send">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ============ PHOTO SOURCE MODAL ============ -->
+<div class="overlay-bg" id="photoSrcOverlay"></div>
+<div class="sheet" id="photoSrcSheet">
+  <div class="drag-handle"></div>
+  <div class="sheet-body modal-sheet">
+    <div class="modal-opt" id="optCamera">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      <span data-i18n="takePhoto">Take Photo</span>
+    </div>
+    <div class="modal-opt" id="optGallery">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 17l-5-5L5 19"/></svg>
+      <span data-i18n="chooseGallery">Choose from Gallery</span>
+    </div>
+    <button class="btn-secondary" id="photoSrcCancel" data-i18n="cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ MARK AS FIXED MODAL ============ -->
+<div class="overlay-bg" id="fixedOverlay"></div>
+<div class="sheet" id="fixedSheet">
+  <div class="drag-handle"></div>
+  <div class="sheet-body modal-sheet">
+    <div class="confirm-title" id="fixedTitle" data-i18n="fixedConfirm1">Mark this observation as fixed?</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="fixedCancel" data-i18n="cancel">Cancel</button>
+      <button class="btn-confirm" id="fixedNext" data-i18n="confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BUG REPORT MODAL ============ -->
+<div class="overlay-bg" id="bugOverlay"></div>
+<div class="sheet" id="bugSheet">
+  <div class="drag-handle"></div>
+  <div class="sheet-body modal-sheet">
+    <div class="confirm-title" data-i18n="reportIssue">Report an Issue</div>
+    <textarea class="text-input" rows="4" id="bugInput" data-i18n-ph="describeIssue" placeholder="Describe the issue..."></textarea>
+    <button class="btn-confirm" id="bugSubmit" style="width:100%;margin-top:12px" data-i18n="submit">Submit</button>
+    <button class="btn-secondary" id="bugCancel" data-i18n="cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ FULLSCREEN IMAGE VIEWER ============ -->
+<div class="img-viewer" id="imgViewer">
+  <button class="iv-close" id="ivClose" aria-label="Close">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="iv-nav iv-prev" id="ivPrev" aria-label="Previous">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <img id="ivImg" src="" alt="evidence full view" />
+  <button class="iv-nav iv-next" id="ivNext" aria-label="Next">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="iv-counter" id="ivCounter"></div>
+</div>
+
+<!-- ============ LOADING OVERLAY ============ -->
+<div class="loading-overlay hidden" id="loadingOverlay"><div class="spinner"></div></div>
+
+<script>
+/* =========================================================
+   SBO Veda-3 — single file app
+   ========================================================= */
+
+// App Script Web App URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZhjLjfkjHQdmV2gNzaw9dCT7piphIulR2FlrHyijS1dwGckaH2PrUnkZNT5vzLbdBeg/exec";
+
+// Cloudinary config
+const CLOUDINARY_CLOUD = "ducpxsehd";
+const CLOUDINARY_PRESET = "ml_default";
+
+/* ---------- GLOBAL STATE (no localStorage) ---------- */
+let currentUser = "";
+let sessionAdminPass = "";    // stored only for markFixed admin verification
+let isAdmin = false;          // set after login; controls "Mark as Fixed" visibility
+let currentLang = "en";       // language stored in JS variable only
+let isDark = true;
+let activeTab = "me";
+let searchFilterMode = "all";
+let formPhotos = [];          // uploaded photo data urls (max 5)
+let currentDetailObs = null;
+let fixedConfirmStep = 1;
+let autoRefreshTimer = null;
+
+// form selection state
+const formState = {
+  department: null, shift: null, location: null,
+  findingType: null, category: null, categoryOther: "",
+  sub3: null, sub3Other: "", risk: null
+};
+
+// data arrays — injected later by backend, empty by default
+let dataMe = [];
+let dataEveryone = [];
+let dataFixed = [];
+let dataSearchResults = [];
+
+/* ---------- DROPDOWN OPTION SOURCES ---------- */
+const DEPARTMENTS = ["General","Production","Quality","Safety","SCM","Maintenance/Electrical","Utility","Continuous Improvement","GA","HR"];
+const SHIFTS = ["Regular","Shift-A (8-hour)","Shift-B (8-hour)","Shift-C (8-hour)","Shift-A (12-hour)","Shift-B (12-hour)"];
+const LOCATIONS = ["Main Office","WB Office","Weight Bridge","Tank Farm","Day Tank","Boiler","Chiller","Compressor & Nitrogen","Warehouse","Laboratory","Soap Area","Beading Area","WWTP","Locker Room","Outside Plant","Transformer Room","Panel Room","DCS Room","Chemical Room","Other"];
+
+const FINDING_TYPES = ["Unsafe Action","Unsafe Condition"];
+const CATEGORIES = {
+  "Unsafe Action": ["Body Position","PPE (APD)","Procedures","Other"],
+  "Unsafe Condition": ["Tools & Equipment","Work Environment","Other"]
+};
+const SUB3 = {
+  "Body Position": ["Awkward Posture","Repetitive Motion","Overexertion","Line of Fire","Eyes Not on Task","Working at Heights","Bypassing Safety Device","Improper Lifting","Improper Tool Use","Other"],
+  "PPE (APD)": ["Head","Respiratory System","Eyes & Face","Hearing","Hand & Arms","Body","Feet & Legs","Quality of PPE","Other"],
+  "Procedures": ["Not Following SOP","Unauthorized Operation","Improper Lockout/Tagout","Working Without Permit","Distracted While Working","Skipping Safety Check","Other"],
+  "Tools & Equipment": ["Damaged Equipment","Missing Guard","Improper Storage","Defective Tools","Other"],
+  "Work Environment": ["Poor Housekeeping","Slippery Surface","Inadequate Lighting","Blocked Exit","Other"]
+};
+
+/* ---------- I18N STRINGS ---------- */
+const STRINGS = {
+  en: {
+    company: "PT. Alliance Consumer Products Indonesia",
+    username: "Username", password: "Password", login: "Login",
+    loginError: "Invalid username or password",
+    fillFields: "Please enter username and password",
+    tabMe: "Me", tabEveryone: "Everyone", tabSearch: "Search", tabFixed: "Fixed",
+    darkMode: "Dark Mode", language: "Language", reportIssue: "Report an Issue",
+    logout: "Logout", newObs: "New Observation", cancel: "Cancel", save: "Save",
+    reporterName: "Reporter Name", photoEvidence: "Photo Evidence",
+    department: "Department", selectDepartment: "Select Department",
+    shift: "Shift", selectShift: "Select Shift",
+    location: "Location", selectLocation: "Select Location",
+    otherLocation: "Other Location", locationDetails: "Location Details",
+    locationDetailsPh: "Add more location details...",
+    findingType: "Finding Type", selectFindingType: "Select Finding Type",
+    category: "Category", selectCategory: "Select Category",
+    specifyOther: "Specify Other",
+    findingDesc: "Finding Description", findingDescPh: "Describe the finding in detail...",
+    recommendation: "Recommendation", recommendationPh: "What should be done to fix this?",
+    riskLevel: "Risk Level", minor: "Minor", major: "Major", critical: "Critical",
+    riskRequired: "Please select a risk level",
+    findingTypeRequired: "Please select a finding type",
+    photoRequired: "Please add at least one photo",
+    departmentRequired: "Please select a department",
+    shiftRequired: "Please select a shift",
+    locationRequired: "Please select a location",
+    otherLocationRequired: "Please specify the location",
+    locDetailsRequired: "Please add location details",
+    categoryRequired: "Please select a category",
+    categoryOtherRequired: "Please specify the category",
+    sub3Required: "Please select an option",
+    sub3OtherRequired: "Please specify the option",
+    descRequired: "Please describe the finding",
+    recRequired: "Please add a recommendation",
+    saved: "Observation saved", saving: "Saving...",
+    noObsYet: "No observations yet", noOpenObs: "No open observations",
+    noFixedYet: "No fixed observations yet",
+    typeToSearch: "Type to search...", noResults: "No results found",
+    searchPlaceholder: "Search observations...",
+    filterOpen: "Open", filterAll: "All", filterFixed: "Fixed",
+    markFixed: "Mark as Fixed", fixedConfirm1: "Mark this observation as fixed?",
+    fixedConfirm2: "Are you sure? This cannot be undone.",
+    confirm: "Confirm", yesFixed: "Yes, Fixed", obsFixed: "Observation marked as fixed",
+    takePhoto: "Take Photo", chooseGallery: "Choose from Gallery",
+    maxPhotos: "Maximum 5 photos", describeIssue: "Describe the issue...",
+    submit: "Submit", issueSubmitted: "Issue reported. Thank you!",
+    recommendationLabel: "Recommendation", locDetailsLabel: "Location Details",
+    photos: "Photos", aiGreeting: "Hi! I'm Veda AI. I can help you with your safety observations. How can I assist you today?",
+    askVeda: "Ask Veda AI...", loggingIn: "Logging in..."
+  },
+  id: {
+    company: "PT. Alliance Consumer Products Indonesia",
+    username: "Nama Pengguna", password: "Kata Sandi", login: "Masuk",
+    loginError: "Nama pengguna atau kata sandi salah",
+    fillFields: "Masukkan nama pengguna dan kata sandi",
+    tabMe: "Saya", tabEveryone: "Semua", tabSearch: "Cari", tabFixed: "Selesai",
+    darkMode: "Mode Gelap", language: "Bahasa", reportIssue: "Laporkan Masalah",
+    logout: "Keluar", newObs: "Observasi Baru", cancel: "Batal", save: "Simpan",
+    reporterName: "Nama Pelapor", photoEvidence: "Bukti Foto",
+    department: "Departemen", selectDepartment: "Pilih Departemen",
+    shift: "Shift", selectShift: "Pilih Shift",
+    location: "Lokasi", selectLocation: "Pilih Lokasi",
+    otherLocation: "Lokasi Lainnya", locationDetails: "Detail Lokasi",
+    locationDetailsPh: "Tambahkan detail lokasi...",
+    findingType: "Jenis Temuan", selectFindingType: "Pilih Jenis Temuan",
+    category: "Kategori", selectCategory: "Pilih Kategori",
+    specifyOther: "Sebutkan Lainnya",
+    findingDesc: "Deskripsi Temuan", findingDescPh: "Jelaskan temuan secara rinci...",
+    recommendation: "Rekomendasi", recommendationPh: "Apa yang harus dilakukan untuk memperbaikinya?",
+    riskLevel: "Tingkat Risiko", minor: "Ringan", major: "Sedang", critical: "Berat",
+    riskRequired: "Silakan pilih tingkat risiko",
+    findingTypeRequired: "Silakan pilih jenis temuan",
+    photoRequired: "Silakan tambahkan setidaknya satu foto",
+    departmentRequired: "Silakan pilih departemen",
+    shiftRequired: "Silakan pilih shift",
+    locationRequired: "Silakan pilih lokasi",
+    otherLocationRequired: "Silakan sebutkan lokasi",
+    locDetailsRequired: "Silakan tambahkan detail lokasi",
+    categoryRequired: "Silakan pilih kategori",
+    categoryOtherRequired: "Silakan sebutkan kategori",
+    sub3Required: "Silakan pilih opsi",
+    sub3OtherRequired: "Silakan sebutkan opsi",
+    descRequired: "Silakan jelaskan temuan",
+    recRequired: "Silakan tambahkan rekomendasi",
+    saved: "Observasi tersimpan", saving: "Menyimpan...",
+    noObsYet: "Belum ada observasi", noOpenObs: "Tidak ada observasi terbuka",
+    noFixedYet: "Belum ada observasi yang selesai",
+    typeToSearch: "Ketik untuk mencari...", noResults: "Tidak ada hasil",
+    searchPlaceholder: "Cari observasi...",
+    filterOpen: "Terbuka", filterAll: "Semua", filterFixed: "Selesai",
+    markFixed: "Tandai Selesai", fixedConfirm1: "Tandai observasi ini sebagai selesai?",
+    fixedConfirm2: "Apakah Anda yakin? Ini tidak dapat dibatalkan.",
+    confirm: "Konfirmasi", yesFixed: "Ya, Selesai", obsFixed: "Observasi ditandai selesai",
+    takePhoto: "Ambil Foto", chooseGallery: "Pilih dari Galeri",
+    maxPhotos: "Maksimal 5 foto", describeIssue: "Jelaskan masalahnya...",
+    submit: "Kirim", issueSubmitted: "Masalah dilaporkan. Terima kasih!",
+    recommendationLabel: "Rekomendasi", locDetailsLabel: "Detail Lokasi",
+    photos: "Foto", aiGreeting: "Hai! Saya Veda AI. Saya dapat membantu Anda dengan observasi keselamatan. Ada yang bisa saya bantu?",
+    askVeda: "Tanya Veda AI...", loggingIn: "Sedang masuk..."
+  }
+};
+function t(key) { return (STRINGS[currentLang] && STRINGS[currentLang][key]) || key; }
+
+/* =========================================================
+   LANGUAGE TOGGLE (shared, synced)
+   ========================================================= */
+const loginLangToggle = document.getElementById("loginLangToggle");
+const drawerLangToggle = document.getElementById("drawerLangToggle");
+
+function setLanguage(lang) {
+  currentLang = lang;
+  // keep BOTH toggles in sync
+  loginLangToggle.setAttribute("data-lang", lang);
+  drawerLangToggle.setAttribute("data-lang", lang);
+  document.documentElement.lang = lang;
+  applyStrings();
+}
+// clicking a toggle flips language (slide). Toggling one updates the other.
+function toggleLanguage() { setLanguage(currentLang === "en" ? "id" : "en"); }
+loginLangToggle.addEventListener("click", toggleLanguage);
+drawerLangToggle.addEventListener("click", toggleLanguage);
+
+function applyStrings() {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.getAttribute("data-i18n"));
+  });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => {
+    el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph")));
+  });
+  // re-render dynamic dropdown placeholders & lists
+  if (!document.getElementById("app").classList.contains("hidden")) {
+    buildFormDropdowns();
+    renderActiveList();
+  }
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+const darkToggle = document.getElementById("darkToggle");
+function applyTheme() {
+  document.documentElement.classList.toggle("light", !isDark);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#0f0f0f" : "#f5f5f5");
+}
+darkToggle.addEventListener("change", () => { isDark = darkToggle.checked; applyTheme(); });
+
+/* =========================================================
+   TOASTS
+   ========================================================= */
+function showToast(msg, type = "info") {
+  const wrap = document.getElementById("toastWrap");
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+const loginLogo = document.getElementById("loginLogo");
+const logoImg = new Image();
+logoImg.src = "icon.png";
+logoImg.alt = "App logo";
+logoImg.onload = () => { loginLogo.innerHTML = ""; loginLogo.appendChild(logoImg); };
+// fallback shield emoji already in HTML
+
+document.getElementById("pwToggle").addEventListener("click", () => {
+  const inp = document.getElementById("loginPass");
+  inp.type = inp.type === "password" ? "text" : "password";
+});
+
+document.getElementById("loginBtn").addEventListener("click", doLogin);
+document.getElementById("loginPass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+function doLogin() {
+  const user = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "";
+  if (!user || !pass) { errEl.textContent = t("fillFields"); return; }
+
+  showLoading(true);
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "login", user: user, pass: pass })
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (data.status === "ok") {
+      currentUser = data.user || user;
+      isAdmin = !!data.isAdmin;
+      sessionAdminPass = isAdmin ? pass : "";
+      onLoginSuccess();
+    } else {
+      errEl.textContent = data.message || t("loginError");
+    }
+  })
+  .catch(() => {
+    showLoading(false);
+    errEl.textContent = "Network error. Please try again.";
+  });
+}
+
+function onLoginSuccess() {
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  const letter = (currentUser[0] || "U").toUpperCase();
+  document.getElementById("topAvatar").textContent = letter;
+  document.getElementById("drawerAvatar").textContent = letter;
+  document.getElementById("drawerName").textContent = currentUser;
+  document.getElementById("drawerAdminBadge").classList.toggle("hidden", !isAdmin);
+  document.getElementById("formReporter").textContent = currentUser;
+
+  buildFormDropdowns();
+  loadTabData("me");
+  startAutoRefresh();
+}
+
+/* =========================================================
+   LOADING OVERLAY
+   ========================================================= */
+function showLoading(on) {
+  document.getElementById("loadingOverlay").classList.toggle("hidden", !on);
+}
+
+/* =========================================================
+   TABS / NAVIGATION
+   ========================================================= */
+document.getElementById("bottomNav").addEventListener("click", e => {
+  const btn = e.target.closest(".nav-tab");
+  if (!btn) return;
+  switchTab(btn.dataset.tab);
+});
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".nav-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".tab-page").forEach(p => p.classList.toggle("active", p.id === "page-" + tab));
+  loadTabData(tab);
+}
+
+function mapRow(row) {
+  return {
+    id: row.id || row.rowIndex,
+    rowIndex: row.rowIndex,
+    risk: (row.risk || "MINOR").toLowerCase(),
+    reporter: row.name || "",
+    department: row.department || "",
+    shift: row.shift || "",
+    location: row.location || "",
+    locationDetails: row.location_details || "",
+    findingType: row.finding_type || "",
+    sub1: row.sub1 || "",
+    sub2: row.sub2 || "",
+    description: row.finding_description || "",
+    recommendation: row.recommendation || "",
+    photos: row.images || [],
+    timestamp: row.timestamp || "",
+    status: (row.status || "Open").toLowerCase()
+  };
+}
+
+function loadTabData(tab) {
+  if (tab === "me") {
+    fetch(SCRIPT_URL + "?name=" + encodeURIComponent(currentUser))
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") {
+          dataMe = (data.rows || []).map(mapRow);
+          rebuildSearchCache();
+          renderActiveList();
+          if (activeTab === "search") runLocalSearch();
+        }
+      })
+      .catch(() => renderActiveList());
+  } else if (tab === "everyone") {
+    fetch(SCRIPT_URL)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") {
+          dataEveryone = (data.rows || []).map(mapRow);
+          rebuildSearchCache();
+          renderActiveList();
+          if (activeTab === "search") runLocalSearch();
+        }
+      })
+      .catch(() => renderActiveList());
+  } else if (tab === "fixed") {
+    fetch(SCRIPT_URL + "?action=fixed")
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") {
+          dataFixed = (data.rows || []).map(mapRow);
+          rebuildSearchCache();
+          renderActiveList();
+          if (activeTab === "search") runLocalSearch();
+        }
+      })
+      .catch(() => renderActiveList());
+  } else if (tab === "search") {
+    renderActiveList();
+    // ensure we have fresh data to search across
+    if (!dataEveryone.length) loadTabData("everyone");
+    if (!dataFixed.length) loadTabData("fixed");
+  } else {
+    renderActiveList();
+  }
+}
+
+/* =========================================================
+   CARD RENDERING
+   ========================================================= */
+function riskClass(risk) { return risk === "critical" ? "critical" : risk === "major" ? "major" : "minor"; }
+function riskLabel(risk) { return t(risk); }
+
+function obsCardHTML(obs, opts = {}) {
+  const rc = riskClass(obs.risk);
+  const badge = opts.fixed
+    ? `<span class="badge badge-fixed">FIXED</span>`
+    : `<span class="badge badge-${rc}">${riskLabel(obs.risk).toUpperCase()}</span>`;
+  const breadcrumb = [obs.findingType, obs.sub1, obs.sub2].filter(Boolean).join(" › ");
+  const photoCount = (obs.photos || []).length;
+  const photoHTML = photoCount
+    ? `<div class="obs-photo" data-photo-idx="0" data-id="${obs.id}">
+         <img src="${esc(obs.photos[0])}" alt="evidence" loading="lazy">
+         ${photoCount > 1 ? `<span class="photo-count">+${photoCount - 1}</span>` : ""}
+       </div>`
+    : "";
+  const infoHTML = `
+      <div class="obs-info">
+        <div class="obs-reporter">${esc(obs.reporter || "")}</div>
+        <div class="obs-meta">${esc(obs.department || "")}${obs.shift ? " • " + esc(obs.shift) : ""}</div>
+        <div class="obs-loc">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>
+          <span>${esc(obs.location || "")}</span>
+        </div>
+        ${breadcrumb ? `<div class="obs-breadcrumb">${esc(breadcrumb)}</div>` : ""}
+      </div>`;
+  const topHTML = `<div class="obs-top${photoHTML ? "" : " no-photo"}">${photoHTML}${infoHTML}</div>`;
+  return `
+    <div class="obs-card" data-id="${obs.id}">
+      <div class="obs-strip strip-${rc}"></div>
+      ${badge}
+      ${topHTML}
+      <div class="obs-desc">${esc(obs.description || "")}</div>
+      <div class="obs-time">${esc(obs.timestamp || "")}</div>
+    </div>`;
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function emptyState(icon, text) {
+  return `<div class="empty-state"><div class="empty-ill">${icon}</div><p>${text}</p></div>`;
+}
+const ICON_DOC = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
+const ICON_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_SEARCH = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+
+function renderActiveList() {
+  if (activeTab === "me") {
+    const el = document.getElementById("list-me");
+    el.innerHTML = dataMe.length ? dataMe.map(o => obsCardHTML(o)).join("") : emptyState(ICON_DOC, t("noObsYet"));
+  } else if (activeTab === "everyone") {
+    const el = document.getElementById("list-everyone");
+    el.innerHTML = dataEveryone.length ? dataEveryone.map(o => obsCardHTML(o)).join("") : emptyState(ICON_DOC, t("noOpenObs"));
+  } else if (activeTab === "fixed") {
+    const el = document.getElementById("list-fixed");
+    el.innerHTML = dataFixed.length ? dataFixed.slice(0,20).map(o => obsCardHTML(o, {fixed:true})).join("") : emptyState(ICON_CHECK, t("noFixedYet"));
+  } else if (activeTab === "search") {
+    renderSearch();
+  }
+}
+
+/* card tap → detail (or photo tap → fullscreen viewer) */
+document.querySelector(".content").addEventListener("click", e => {
+  const photo = e.target.closest(".obs-photo");
+  const card = e.target.closest(".obs-card");
+  if (!card) return;
+  const id = card.dataset.id;
+  const all = [...dataMe, ...dataEveryone, ...dataFixed, ...dataSearchResults];
+  const obs = all.find(o => String(o.id) === String(id));
+  if (!obs) return;
+  if (photo) {
+    openImageViewer(obs.photos || [], 0);
+    return;
+  }
+  openDetail(obs);
+});
+
+/* =========================================================
+   FULLSCREEN IMAGE VIEWER
+   ========================================================= */
+const imgViewer = document.getElementById("imgViewer");
+const ivImg = document.getElementById("ivImg");
+const ivCounter = document.getElementById("ivCounter");
+let ivPhotos = [];
+let ivIndex = 0;
+function openImageViewer(photos, startIndex) {
+  ivPhotos = photos || [];
+  if (!ivPhotos.length) return;
+  ivIndex = startIndex || 0;
+  updateImageViewer();
+  imgViewer.classList.add("show");
+}
+function updateImageViewer() {
+  ivImg.src = ivPhotos[ivIndex];
+  const multi = ivPhotos.length > 1;
+  document.getElementById("ivPrev").style.display = multi ? "flex" : "none";
+  document.getElementById("ivNext").style.display = multi ? "flex" : "none";
+  ivCounter.style.display = multi ? "block" : "none";
+  ivCounter.textContent = (ivIndex + 1) + " / " + ivPhotos.length;
+}
+document.getElementById("ivClose").addEventListener("click", () => imgViewer.classList.remove("show"));
+document.getElementById("ivPrev").addEventListener("click", () => { ivIndex = (ivIndex - 1 + ivPhotos.length) % ivPhotos.length; updateImageViewer(); });
+document.getElementById("ivNext").addEventListener("click", () => { ivIndex = (ivIndex + 1) % ivPhotos.length; updateImageViewer(); });
+imgViewer.addEventListener("click", e => { if (e.target === imgViewer) imgViewer.classList.remove("show"); });
+
+/* photo thumb clicks in detail sheet & photo upload thumbs */
+document.addEventListener("click", e => {
+  const thumb = e.target.closest(".photo-thumb img, .photo-up-thumb img");
+  if (!thumb) return;
+  if (thumb.closest(".photo-row")) {
+    const row = thumb.closest(".photo-row");
+    const imgs = [...row.querySelectorAll("img")].map(im => im.src);
+    const idx = imgs.indexOf(thumb.src);
+    openImageViewer(imgs, idx >= 0 ? idx : 0);
+  } else if (thumb.closest(".photo-up-thumb")) {
+    const row = thumb.closest("#photoUploadRow");
+    const imgs = [...row.querySelectorAll("img")].map(im => im.src);
+    const idx = imgs.indexOf(thumb.src);
+    openImageViewer(imgs, idx >= 0 ? idx : 0);
+  }
+});
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+const searchInput = document.getElementById("searchInput");
+let searchDebounceTimer = null;
+let allObsCache = []; // combined Me + Everyone + Fixed for instant local search
+
+function rebuildSearchCache() {
+  const map = new Map();
+  [...dataMe, ...dataEveryone, ...dataFixed].forEach(o => map.set(String(o.id), o));
+  allObsCache = [...map.values()];
+}
+
+function matchesQuery(o, q) {
+  const hay = [
+    o.reporter, o.department, o.shift, o.location, o.locationDetails,
+    o.findingType, o.sub1, o.sub2, o.description, o.recommendation, o.risk, o.status
+  ].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
+}
+
+function runLocalSearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q) { dataSearchResults = []; renderSearch(); return; }
+  const filter = searchFilterMode; // "open" | "all" | "fixed"
+  dataSearchResults = allObsCache.filter(o => {
+    if (!matchesQuery(o, q)) return false;
+    const isFixed = o.status === "fixed";
+    if (filter === "open") return !isFixed;
+    if (filter === "fixed") return isFixed;
+    return true; // all
+  });
+  renderSearch();
+}
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchDebounceTimer);
+  // instant local search, no network round-trip
+  searchDebounceTimer = setTimeout(runLocalSearch, 80);
+});
+document.getElementById("searchFilter").addEventListener("click", e => {
+  const opt = e.target.closest(".filter-opt");
+  if (!opt) return;
+  searchFilterMode = opt.dataset.filter;
+  document.querySelectorAll("#searchFilter .filter-opt").forEach(o => o.classList.toggle("active", o === opt));
+  runLocalSearch();
+});
+function renderSearch() {
+  const el = document.getElementById("list-search");
+  const q = searchInput.value.trim();
+  if (!q) { el.innerHTML = emptyState(ICON_SEARCH, t("typeToSearch")); return; }
+  if (!dataSearchResults.length) { el.innerHTML = emptyState(ICON_SEARCH, t("noResults")); return; }
+  // strict client-side guard: never show fixed items under "open", or open items under "fixed"
+  const filtered = dataSearchResults.filter(o => {
+    const isFixed = o.status === "fixed";
+    if (searchFilterMode === "open") return !isFixed;
+    if (searchFilterMode === "fixed") return isFixed;
+    return true;
+  });
+  if (!filtered.length) { el.innerHTML = emptyState(ICON_SEARCH, t("noResults")); return; }
+  el.innerHTML = filtered.map(o => obsCardHTML(o, {fixed: o.status === "fixed"})).join("");
+}
+
+/* =========================================================
+   DETAIL BOTTOM SHEET
+   ========================================================= */
+const detailSheet = document.getElementById("detailSheet");
+const detailOverlay = document.getElementById("detailOverlay");
+function openDetail(obs) {
+  currentDetailObs = obs;
+  const rc = riskClass(obs.risk);
+  const fixed = obs.status === "fixed";
+  const badge = fixed
+    ? `<span class="detail-badge" style="background:var(--minor)">FIXED</span>`
+    : `<span class="detail-badge" style="background:var(--${rc})">${riskLabel(obs.risk).toUpperCase()}</span>`;
+  const photos = (obs.photos || []).map(p =>
+    `<div class="photo-thumb"><img src="${esc(p)}" alt="evidence" crossorigin="anonymous"></div>`
+  ).join("") || `<div class="photo-thumb">—</div>`;
+
+  document.getElementById("detailBody").innerHTML = `
+    ${badge}
+    <div class="detail-row"><div class="dl">${t("reporterName")}</div><div class="dv">${esc(obs.reporter||"")} — ${esc(obs.department||"")} • ${esc(obs.shift||"")}</div></div>
+    <div class="detail-row"><div class="dl">${t("location")}</div><div class="dv">${esc(obs.location||"")}${obs.locationDetails ? " — " + esc(obs.locationDetails) : ""}</div></div>
+    <div class="detail-row"><div class="dl">${t("findingType")}</div><div class="dv">${esc(obs.findingType||"-")}</div></div>
+    <div class="detail-row"><div class="dl">${t("category")}</div><div class="dv">${esc(obs.sub1||"-")}</div></div>
+    <div class="detail-row"><div class="dl">Sub</div><div class="dv">${esc(obs.sub2||"-")}</div></div>
+    <div class="detail-row"><div class="dl">${t("findingDesc")}</div><div class="dv">${esc(obs.description||"")}</div></div>
+    <div class="detail-row"><div class="dl">${t("recommendationLabel")}</div><div class="dv">${esc(obs.recommendation||"")}</div></div>
+    <div class="detail-row"><div class="dl">${t("photos")}</div><div class="photo-row">${photos}</div></div>
+    <div class="detail-row"><div class="dl">Timestamp</div><div class="dv">${esc(obs.timestamp||"")}</div></div>
+    <button class="btn-fixed ${(!isAdmin || fixed) ? 'hidden' : ''}" id="detailMarkFixed">${t("markFixed")}</button>
+  `;
+  // "Mark as Fixed" button hidden by default; only shown when isAdmin === true
+  const mf = document.getElementById("detailMarkFixed");
+  if (mf) mf.addEventListener("click", openFixedModal);
+  openSheet(detailSheet, detailOverlay);
+}
+detailOverlay.addEventListener("click", () => closeSheet(detailSheet, detailOverlay));
+
+/* =========================================================
+   GENERIC SHEET HELPERS
+   ========================================================= */
+function openSheet(sheet, overlay) {
+  if (overlay) overlay.classList.add("show");
+  sheet.classList.add("show");
+}
+function closeSheet(sheet, overlay) {
+  if (overlay) overlay.classList.remove("show");
+  sheet.classList.remove("show");
+}
+
+/* =========================================================
+   SETTINGS DRAWER
+   ========================================================= */
+const drawer = document.getElementById("drawer");
+const drawerOverlay = document.getElementById("drawerOverlay");
+document.getElementById("menuBtn").addEventListener("click", () => { drawer.classList.add("show"); drawerOverlay.classList.add("show"); });
+drawerOverlay.addEventListener("click", () => { drawer.classList.remove("show"); drawerOverlay.classList.remove("show"); });
+document.getElementById("logoutRow").addEventListener("click", logout);
+document.getElementById("reportIssueRow").addEventListener("click", () => { drawer.classList.remove("show"); drawerOverlay.classList.remove("show"); openSheet(bugSheet, bugOverlay); });
+
+function logout() {
+  stopAutoRefresh();
+  currentUser = ""; isAdmin = false; sessionAdminPass = "";
+  drawer.classList.remove("show"); drawerOverlay.classList.remove("show");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("loginUser").value = "";
+  document.getElementById("loginPass").value = "";
+  document.getElementById("loginError").textContent = "";
+}
+
+/* =========================================================
+   CUSTOM DROPDOWN BUILDER
+   ========================================================= */
+function buildDropdown(container, options, placeholder, selectedValue, onSelect) {
+  container.innerHTML = "";
+  const dd = document.createElement("div");
+  dd.className = "dropdown";
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "dropdown-trigger" + (selectedValue ? "" : " placeholder");
+  trigger.innerHTML = `<span>${selectedValue ? esc(selectedValue) : esc(placeholder)}</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+  const menu = document.createElement("div");
+  menu.className = "dropdown-menu";
+  options.forEach(opt => {
+    const o = document.createElement("div");
+    o.className = "dropdown-option" + (opt === selectedValue ? " selected" : "");
+    o.textContent = opt;
+    o.addEventListener("click", () => {
+      dd.classList.remove("open");
+      onSelect(opt);
+    });
+    menu.appendChild(o);
+  });
+  trigger.addEventListener("click", () => {
+    document.querySelectorAll(".dropdown.open").forEach(d => { if (d !== dd) d.classList.remove("open"); });
+    dd.classList.toggle("open");
+  });
+  dd.appendChild(trigger); dd.appendChild(menu);
+  container.appendChild(dd);
+  return trigger;
+}
+// close dropdowns when clicking outside
+document.addEventListener("click", e => {
+  if (!e.target.closest(".dropdown")) document.querySelectorAll(".dropdown.open").forEach(d => d.classList.remove("open"));
+});
+
+function labeledField(container, labelText) {
+  container.innerHTML = `<label>${labelText}</label><div class="dd-host"></div>`;
+  return container.querySelector(".dd-host");
+}
+
+function buildFormDropdowns() {
+  // Department
+  const deptHost = labeledField(document.getElementById("ff-dept"), t("department"));
+  buildDropdown(deptHost, DEPARTMENTS, t("selectDepartment"), formState.department, val => {
+    formState.department = val; buildFormDropdowns();
+  });
+  // Shift
+  const shiftHost = labeledField(document.getElementById("ff-shift"), t("shift"));
+  buildDropdown(shiftHost, SHIFTS, t("selectShift"), formState.shift, val => {
+    formState.shift = val; buildFormDropdowns();
+  });
+  // Location
+  const locHost = labeledField(document.getElementById("ff-location"), t("location"));
+  buildDropdown(locHost, LOCATIONS, t("selectLocation"), formState.location, val => {
+    formState.location = val; buildFormDropdowns();
+  });
+  document.getElementById("ff-otherLocation").classList.toggle("hidden", formState.location !== "Other");
+
+  // Finding Type (level 1)
+  const ftHost = labeledField(document.getElementById("ff-findingType"), t("findingType"));
+  buildDropdown(ftHost, FINDING_TYPES, t("selectFindingType"), formState.findingType, val => {
+    formState.findingType = val; formState.category = null; formState.sub3 = null;
+    formState.categoryOther = ""; formState.sub3Other = ""; buildFormDropdowns();
+  });
+
+  // Category (level 2)
+  const catWrap = document.getElementById("ff-category");
+  if (formState.findingType && CATEGORIES[formState.findingType]) {
+    catWrap.classList.remove("hidden");
+    const catHost = labeledField(catWrap, t("category"));
+    buildDropdown(catHost, CATEGORIES[formState.findingType], t("selectCategory"), formState.category, val => {
+      formState.category = val; formState.sub3 = null; formState.sub3Other = ""; buildFormDropdowns();
+    });
+  } else {
+    catWrap.classList.add("hidden");
+  }
+
+  // Category "Other" input (level 2 other)
+  document.getElementById("ff-categoryOther").classList.toggle("hidden", formState.category !== "Other");
+
+  // Sub3 (level 3)
+  const sub3Wrap = document.getElementById("ff-sub3");
+  if (formState.category && SUB3[formState.category]) {
+    sub3Wrap.classList.remove("hidden");
+    const sub3Host = labeledField(sub3Wrap, formState.category);
+    buildDropdown(sub3Host, SUB3[formState.category], t("selectCategory"), formState.sub3, val => {
+      formState.sub3 = val; formState.sub3Other = ""; buildFormDropdowns();
+    });
+  } else {
+    sub3Wrap.classList.add("hidden");
+  }
+
+  // Sub3 "Other" input (level 3 other)
+  document.getElementById("ff-sub3Other").classList.toggle("hidden", formState.sub3 !== "Other");
+}
+
+/* =========================================================
+   NEW OBSERVATION FORM
+   ========================================================= */
+const formSheet = document.getElementById("formSheet");
+const formOverlay = document.getElementById("formOverlay");
+document.getElementById("addFab").addEventListener("click", openForm);
+document.getElementById("formCancel").addEventListener("click", () => closeSheet(formSheet, formOverlay));
+formOverlay.addEventListener("click", () => closeSheet(formSheet, formOverlay));
+document.getElementById("formSave").addEventListener("click", submitObservation);
+
+function resetForm() {
+  formPhotos = [];
+  Object.assign(formState, { department:null, shift:null, location:null, findingType:null, category:null, categoryOther:"", sub3:null, sub3Other:"", risk:null });
+  document.getElementById("otherLocationInput").value = "";
+  document.getElementById("locDetailsInput").value = "";
+  document.getElementById("categoryOtherInput").value = "";
+  document.getElementById("sub3OtherInput").value = "";
+  document.getElementById("descInput").value = "";
+  document.getElementById("recInput").value = "";
+  document.querySelectorAll(".risk-btn").forEach(b => b.classList.remove("sel"));
+  clearInvalidStates();
+  renderPhotoThumbs();
+  buildFormDropdowns();
+}
+function openForm() {
+  resetForm();
+  document.getElementById("formReporter").textContent = currentUser;
+  openSheet(formSheet, formOverlay);
+}
+
+/* risk buttons */
+document.getElementById("riskGroup").addEventListener("click", e => {
+  const btn = e.target.closest(".risk-btn");
+  if (!btn) return;
+  formState.risk = btn.dataset.risk;
+  document.querySelectorAll(".risk-btn").forEach(b => b.classList.remove("sel"));
+  btn.classList.add("sel");
+  document.getElementById("riskGroup").classList.remove("invalid");
+});
+
+/* clear invalid styling as user fills fields */
+document.getElementById("formBody").addEventListener("input", e => {
+  if (e.target.classList.contains("text-input")) e.target.classList.remove("invalid");
+});
+document.getElementById("photoAddBtn").addEventListener("click", () => openSheet(photoSrcSheet, photoSrcOverlay));
+function renderPhotoThumbs() {
+  const row = document.getElementById("photoUploadRow");
+  const thumbs = formPhotos.map((src, i) =>
+    `<div class="photo-up-thumb"><img src="${esc(src)}" alt="photo ${i+1}"><div class="rm" data-i="${i}">×</div></div>`
+  ).join("");
+  const addBtn = formPhotos.length < 5
+    ? `<button class="photo-add" id="photoAddBtn" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></button>`
+    : "";
+  row.innerHTML = thumbs + addBtn;
+  const newAdd = document.getElementById("photoAddBtn");
+  if (newAdd) newAdd.addEventListener("click", () => openSheet(photoSrcSheet, photoSrcOverlay));
+  row.querySelectorAll(".rm").forEach(x => x.addEventListener("click", () => {
+    formPhotos.splice(+x.dataset.i, 1); renderPhotoThumbs();
+  }));
+}
+
+/* photo source modal */
+const photoSrcSheet = document.getElementById("photoSrcSheet");
+const photoSrcOverlay = document.getElementById("photoSrcOverlay");
+document.getElementById("photoSrcCancel").addEventListener("click", () => closeSheet(photoSrcSheet, photoSrcOverlay));
+photoSrcOverlay.addEventListener("click", () => closeSheet(photoSrcSheet, photoSrcOverlay));
+
+const hiddenFile = document.createElement("input");
+hiddenFile.type = "file"; hiddenFile.accept = "image/*";
+const hiddenCam = document.createElement("input");
+hiddenCam.type = "file"; hiddenCam.accept = "image/*"; hiddenCam.capture = "environment";
+
+document.getElementById("optCamera").addEventListener("click", () => { hiddenCam.click(); closeSheet(photoSrcSheet, photoSrcOverlay); });
+document.getElementById("optGallery").addEventListener("click", () => { hiddenFile.click(); closeSheet(photoSrcSheet, photoSrcOverlay); });
+
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (formPhotos.length >= 5) { showToast(t("maxPhotos"), "error"); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    // BACKEND: Cloudinary upload here (cloud: ducpxsehd, preset: ml_default)
+    // For now store the local data URL for preview.
+    formPhotos.push(reader.result);
+    document.getElementById("photoUploadRow").classList.remove("invalid");
+    renderPhotoThumbs();
+  };
+  reader.readAsDataURL(file);
+  input.value = "";
+}
+hiddenFile.addEventListener("change", () => handleFile(hiddenFile));
+hiddenCam.addEventListener("change", () => handleFile(hiddenCam));
+
+/* validation + submit */
+function clearInvalidStates() {
+  document.querySelectorAll(".dropdown-trigger.invalid").forEach(el => el.classList.remove("invalid"));
+  document.querySelectorAll(".text-input.invalid").forEach(el => el.classList.remove("invalid"));
+  document.getElementById("riskGroup").classList.remove("invalid");
+  document.getElementById("photoUploadRow").classList.remove("invalid");
+}
+function submitObservation() {
+  clearInvalidStates();
+
+  // 1. Photo evidence required
+  if (!formPhotos.length) {
+    document.getElementById("photoUploadRow").classList.add("invalid");
+    showToast(t("photoRequired"), "error");
+    return;
+  }
+  // 2. Department required
+  if (!formState.department) {
+    document.querySelector("#ff-dept .dropdown-trigger").classList.add("invalid");
+    showToast(t("departmentRequired"), "error");
+    return;
+  }
+  // 3. Shift required
+  if (!formState.shift) {
+    document.querySelector("#ff-shift .dropdown-trigger").classList.add("invalid");
+    showToast(t("shiftRequired"), "error");
+    return;
+  }
+  // 4. Location required
+  if (!formState.location) {
+    document.querySelector("#ff-location .dropdown-trigger").classList.add("invalid");
+    showToast(t("locationRequired"), "error");
+    return;
+  }
+  // 4b. "Other" location text required
+  if (formState.location === "Other" && !document.getElementById("otherLocationInput").value.trim()) {
+    document.getElementById("otherLocationInput").classList.add("invalid");
+    showToast(t("otherLocationRequired"), "error");
+    return;
+  }
+  // 5. Location details required
+  if (!document.getElementById("locDetailsInput").value.trim()) {
+    document.getElementById("locDetailsInput").classList.add("invalid");
+    showToast(t("locDetailsRequired"), "error");
+    return;
+  }
+  // 6. Finding type required
+  if (!formState.findingType) {
+    document.querySelector("#ff-findingType .dropdown-trigger").classList.add("invalid");
+    showToast(t("findingTypeRequired"), "error");
+    return;
+  }
+  // 7. Category required
+  if (!formState.category) {
+    document.querySelector("#ff-category .dropdown-trigger").classList.add("invalid");
+    showToast(t("categoryRequired"), "error");
+    return;
+  }
+  // 7b. Category "Other" text required
+  if (formState.category === "Other" && !document.getElementById("categoryOtherInput").value.trim()) {
+    document.getElementById("categoryOtherInput").classList.add("invalid");
+    showToast(t("categoryOtherRequired"), "error");
+    return;
+  }
+  // 8. Sub-level required (only if this category has sub-options)
+  if (SUB3[formState.category] && !formState.sub3) {
+    document.querySelector("#ff-sub3 .dropdown-trigger").classList.add("invalid");
+    showToast(t("sub3Required"), "error");
+    return;
+  }
+  // 8b. Sub "Other" text required
+  if (formState.sub3 === "Other" && !document.getElementById("sub3OtherInput").value.trim()) {
+    document.getElementById("sub3OtherInput").classList.add("invalid");
+    showToast(t("sub3OtherRequired"), "error");
+    return;
+  }
+  // 9. Description required
+  if (!document.getElementById("descInput").value.trim()) {
+    document.getElementById("descInput").classList.add("invalid");
+    showToast(t("descRequired"), "error");
+    return;
+  }
+  // 10. Recommendation required
+  if (!document.getElementById("recInput").value.trim()) {
+    document.getElementById("recInput").classList.add("invalid");
+    showToast(t("recRequired"), "error");
+    return;
+  }
+  // 11. Risk required
+  if (!formState.risk) {
+    document.getElementById("riskGroup").classList.add("invalid");
+    showToast(t("riskRequired"), "error");
+    return;
+  }
+
+  const payload = {
+    reporter: currentUser,
+    photos: formPhotos,
+    department: formState.department,
+    shift: formState.shift,
+    location: formState.location === "Other" ? document.getElementById("otherLocationInput").value.trim() : formState.location,
+    locationDetails: document.getElementById("locDetailsInput").value.trim(),
+    findingType: formState.findingType,
+    sub1: formState.category === "Other" ? document.getElementById("categoryOtherInput").value.trim() : formState.category,
+    sub2: formState.sub3 === "Other" ? document.getElementById("sub3OtherInput").value.trim() : formState.sub3,
+    description: document.getElementById("descInput").value.trim(),
+    recommendation: document.getElementById("recInput").value.trim(),
+    risk: formState.risk
+  };
+
+  showLoading(true);
+  // Upload photos to Cloudinary first, then POST to Apps Script
+  Promise.all(formPhotos.map(dataUrl => {
+    if (dataUrl.startsWith("http")) return Promise.resolve(dataUrl); // already uploaded
+    const fd = new FormData();
+    fd.append("file", dataUrl);
+    fd.append("upload_preset", CLOUDINARY_PRESET);
+    return fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD + "/image/upload", {
+      method: "POST", body: fd
+    })
+    .then(r => r.json())
+    .then(d => d.secure_url || dataUrl)
+    .catch(() => dataUrl);
+  }))
+  .then(uploadedUrls => {
+    const postPayload = {
+      name: payload.reporter,
+      department: payload.department || "",
+      shift: payload.shift || "",
+      location: payload.location || "",
+      location_details: payload.locationDetails || "",
+      finding_type: payload.findingType || "",
+      sub1: payload.sub1 || "",
+      sub2: payload.sub2 || "",
+      finding_description: payload.description || "",
+      recommendation: payload.recommendation || "",
+      risk: (payload.risk || "minor").toUpperCase(),
+      images: uploadedUrls
+    };
+    return fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(postPayload)
+    });
+  })
+  .then(r => r.json())
+  .then(data => {
+    showLoading(false);
+    if (data.status === "ok") {
+      closeSheet(formSheet, formOverlay);
+      showToast(t("saved"), "success");
+      loadTabData("me");
+      if (activeTab !== "me") loadTabData(activeTab);
+    } else {
+      showToast("Save failed: " + (data.message || "Unknown error"), "error");
+    }
+  })
+  .catch(() => {
+    showLoading(false);
+    showToast("Network error. Please try again.", "error");
+  });
+}
+
+/* =========================================================
+   MARK AS FIXED MODAL (2-step)
+   ========================================================= */
+const fixedSheet = document.getElementById("fixedSheet");
+const fixedOverlay = document.getElementById("fixedOverlay");
+function openFixedModal() {
+  fixedConfirmStep = 1;
+  document.getElementById("fixedTitle").textContent = t("fixedConfirm1");
+  document.getElementById("fixedNext").textContent = t("confirm");
+  document.getElementById("fixedNext").className = "btn-confirm";
+  openSheet(fixedSheet, fixedOverlay);
+}
+document.getElementById("fixedCancel").addEventListener("click", () => closeSheet(fixedSheet, fixedOverlay));
+fixedOverlay.addEventListener("click", () => closeSheet(fixedSheet, fixedOverlay));
+document.getElementById("fixedNext").addEventListener("click", () => {
+  if (fixedConfirmStep === 1) {
+    fixedConfirmStep = 2;
+    document.getElementById("fixedTitle").textContent = t("fixedConfirm2");
+    document.getElementById("fixedNext").textContent = t("yesFixed");
+    document.getElementById("fixedNext").className = "btn-danger";
+  } else {
+    if (!currentDetailObs) return;
+    showLoading(true);
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        action: "markFixed",
+        rowIndex: currentDetailObs.rowIndex,
+        user: currentUser,
+        pass: sessionAdminPass
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      showLoading(false);
+      if (data.status === "ok") {
+        closeSheet(fixedSheet, fixedOverlay);
+        closeSheet(detailSheet, detailOverlay);
+        showToast(t("obsFixed"), "success");
+        loadTabData("me");
+        loadTabData("everyone");
+        loadTabData("fixed");
+      } else {
+        showToast("Error: " + (data.message || "Failed"), "error");
+      }
+    })
+    .catch(() => {
+      showLoading(false);
+      showToast("Network error.", "error");
+    });
+  }
+});
+
+/* =========================================================
+   BUG REPORT MODAL
+   ========================================================= */
+const bugSheet = document.getElementById("bugSheet");
+const bugOverlay = document.getElementById("bugOverlay");
+document.getElementById("bugCancel").addEventListener("click", () => closeSheet(bugSheet, bugOverlay));
+bugOverlay.addEventListener("click", () => closeSheet(bugSheet, bugOverlay));
+document.getElementById("bugSubmit").addEventListener("click", () => {
+  const text = document.getElementById("bugInput").value.trim();
+  if (!text) return;
+  // BACKEND: submit bug report (could reuse SCRIPT_URL)
+  document.getElementById("bugInput").value = "";
+  closeSheet(bugSheet, bugOverlay);
+  showToast(t("issueSubmitted"), "success");
+});
+
+/* =========================================================
+   AI CHAT
+   ========================================================= */
+const aiModal = document.getElementById("aiModal");
+const chatArea = document.getElementById("chatArea");
+document.getElementById("aiFab").addEventListener("click", openAi);
+document.getElementById("aiClose").addEventListener("click", () => aiModal.classList.remove("show"));
+function openAi() {
+  if (!chatArea.dataset.seeded) {
+    const openCount = dataEveryone.length; // placeholder for dynamic count
+    addBubble(t("aiGreeting") + (openCount ? ` (${openCount})` : ""), "ai");
+    chatArea.dataset.seeded = "1";
+  }
+  aiModal.classList.add("show");
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+function addBubble(text, who) {
+  const b = document.createElement("div");
+  b.className = "bubble " + who;
+  b.textContent = text;
+  chatArea.appendChild(b);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return b;
+}
+document.getElementById("chatSend").addEventListener("click", sendChat);
+document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
+function sendChat() {
+  const inp = document.getElementById("chatInput");
+  const msg = inp.value.trim();
+  if (!msg) return;
+  addBubble(msg, "user");
+  inp.value = "";
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.innerHTML = "<span></span><span></span><span></span>";
+  chatArea.appendChild(typing);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  // Build message history from chat bubbles
+  const chatHistory = [];
+  document.querySelectorAll("#chatArea .bubble").forEach(b => {
+    chatHistory.push({ role: b.classList.contains("user") ? "user" : "assistant", content: b.textContent });
+  });
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "aiChat", messages: chatHistory, lang: currentLang })
+  })
+  .then(r => r.json())
+  .then(data => {
+    typing.remove();
+    if (data.status === "ok" && data.reply) {
+      addBubble(data.reply, "ai");
+    } else {
+      addBubble("Sorry, AI is unavailable right now.", "ai");
+    }
+  })
+  .catch(() => {
+    typing.remove();
+    addBubble("Network error. Please try again.", "ai");
+  });
+}
+
+/* =========================================================
+   AUTO-REFRESH (every 30s)
+   ========================================================= */
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(() => {
+    // BACKEND: auto-refresh here  (refresh current tab feed)
+    loadTabData(activeTab);
+  }, 30000);
+}
+function stopAutoRefresh() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+/* =========================================================
+   PULL-TO-REFRESH (placeholder)
+   ========================================================= */
+// BACKEND: pull-to-refresh hook for Me/Everyone feeds
+
+/* =========================================================
+   INIT
+   ========================================================= */
+setLanguage("en");
+applyTheme();
+
+/* =========================================================
+   PWA SERVICE WORKER REGISTRATION
+   ========================================================= */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
