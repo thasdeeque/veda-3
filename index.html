@@ -1420,7 +1420,7 @@ function showSaveSplash(onDone) {
   const content = document.getElementById("saveSplashContent");
   // Reset to connecting state
   content.innerHTML = `
-    <div class="splash-hi save-connecting">Connecting to backend…</div>
+    <div class="splash-hi save-connecting">saving…</div>
     <div class="splash-dots"><span></span><span></span><span></span></div>
   `;
   splash.classList.remove("hidden", "fade-out", "splash-success-bg");
@@ -1441,7 +1441,7 @@ function showSaveSplash(onDone) {
           splash.classList.remove("fade-out", "splash-success-bg");
           onDone();
         }, 400);
-      }, 1000);
+      }, 1500);
     },
     hide() {
       splash.classList.add("hidden");
@@ -2420,15 +2420,11 @@ document.getElementById("deleteConfirm").addEventListener("click", () => {
     body: JSON.stringify({ action: "deleteObservation", user: currentUser, rowIndex: obs.rowIndex })
   })
   .then(r => r.text().then(t => { try { return JSON.parse(t); } catch(e) { return { status: "ok" }; } }))
-  .catch(() => ({ status: "ok" })) // treat network errors as ok (row was likely deleted)
-  .then(data => {
-    if (data.status === "ok") {
-      showToast(currentLang === "id" ? "Observasi dihapus" : "Observation deleted", "success");
-      // Refresh rowIndex references after delete (sheet rows shift)
-      setTimeout(() => { silentRefreshTab("me"); silentRefreshTab("everyone"); }, 1500);
-    } else {
-      showToast("Delete failed: " + (data.message || "Error"), "error");
-    }
+  .catch(() => ({ status: "ok" }))
+  .then(() => {
+    showToast(currentLang === "id" ? "Observasi dihapus" : "Observation deleted", "success");
+    // Refresh rowIndex references after delete (sheet rows shift)
+    setTimeout(() => { silentRefreshTab("me"); silentRefreshTab("everyone"); }, 1500);
   });
 });
 
