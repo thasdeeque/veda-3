@@ -732,7 +732,7 @@
     </div>
   </div>
   <div class="login-card">
-    <div class="login-logo" id="loginLogo"></div>
+    <div class="login-logo" id="loginLogo"> </div>
     <h1>SBO Veda-3</h1>
     <p class="subtitle" data-i18n="company">PT. Alliance Consumer Products Indonesia</p>
     <div class="field">
@@ -1254,8 +1254,9 @@ const loginLogo = document.getElementById("loginLogo");
 const logoImg = new Image();
 logoImg.src = "icon.png";
 logoImg.alt = "App logo";
+logoImg.style.cssText = "width:100%;height:100%;object-fit:cover;";
 logoImg.onload = () => { loginLogo.innerHTML = ""; loginLogo.appendChild(logoImg); };
-// fallback shield emoji already in HTML
+logoImg.onerror = () => { /* keep the fallback emoji */ };
 
 document.getElementById("pwToggle").addEventListener("click", () => {
   const inp = document.getElementById("loginPass");
@@ -1411,6 +1412,15 @@ function loadTabData(tab) {
      removes fixed cards with slide-out animation.
    ========================================================= */
 
+// ── Helpers (must come first — used by everything below) ──
+function riskClass(risk) { return risk === "critical" ? "critical" : risk === "major" ? "major" : "minor"; }
+function riskLabel(risk) { return t(risk); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function emptyState(icon, text) { return `<div class="empty-state"><div class="empty-ill">${icon}</div><p>${text}</p></div>`; }
+const ICON_DOC   = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
+const ICON_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_SEARCH= `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+
 // Track which IDs are currently rendered per list
 const renderedIds = { me: new Set(), everyone: new Set(), fixed: new Set() };
 
@@ -1539,14 +1549,6 @@ function fullRenderList(listEl, data, setKey, opts = {}) {
     renderedIds[setKey].add(String(obs.id));
   });
 }
-
-function riskClass(risk) { return risk === "critical" ? "critical" : risk === "major" ? "major" : "minor"; }
-function riskLabel(risk) { return t(risk); }
-function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function emptyState(icon, text) { return `<div class="empty-state"><div class="empty-ill">${icon}</div><p>${text}</p></div>`; }
-const ICON_DOC = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
-const ICON_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><polyline points="20 6 9 17 4 12"/></svg>`;
-const ICON_SEARCH = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
 /* card tap → detail (or photo tap → fullscreen viewer) */
 document.querySelector(".content").addEventListener("click", e => {
@@ -2300,8 +2302,6 @@ document.getElementById("chatInput").addEventListener("focus", () => {
    — Everyone: every 10s (background, diff-based, no flicker)
    — Me: every 30s
    ========================================================= */
-let autoRefreshMeTimer = null;
-let autoRefreshEveryoneTimer = null;
 
 function silentRefreshTab(tab) {
   // Fetch data silently, update arrays, then diff-render
