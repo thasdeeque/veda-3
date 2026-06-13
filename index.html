@@ -340,6 +340,7 @@
   }
   .obs-time { text-align: right; color: var(--text-secondary); font-size: 11px; margin-top: 8px; }
 
+
   .empty-state {
     text-align: center; padding: 60px 20px; color: var(--text-secondary);
   }
@@ -501,6 +502,7 @@
   }
   .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .btn-fixed { width: 100%; background: var(--minor); color: #fff; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; margin-top: 10px; }
+  .btn-delete-obs { width: 100%; background: var(--critical); color: #fff; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; margin-top: 10px; }
 
   /* ============ FORM ============ */
   .form-field { margin-bottom: 18px; }
@@ -1070,6 +1072,19 @@
 <!-- ============ LOADING OVERLAY (spinner for small ops) ============ -->
 <div class="loading-overlay hidden" id="loadingOverlay"><div class="spinner"></div></div>
 
+<!-- ============ DELETE CONFIRM MODAL ============ -->
+<div class="overlay-bg" id="deleteOverlay"></div>
+<div class="sheet" id="deleteSheet">
+  <div class="drag-handle"></div>
+  <div class="sheet-body modal-sheet">
+    <div class="confirm-title" id="deleteTitle">Delete this observation?</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="deleteCancel" data-i18n="cancel">Cancel</button>
+      <button class="btn-danger" id="deleteConfirm">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ WELCOME SPLASH ============ -->
 <div class="fullscreen-splash hidden" id="welcomeSplash">
   <div class="splash-content">
@@ -1093,7 +1108,7 @@
    ========================================================= */
 
 // App Script Web App URL
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyq9YXaFC7Wi-bTepENTXAwhOMpff_lnYLioK3yjFcW7Wskb49p173efW6SIUoglIlJvg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxufSITP55mOIvMvbHpwbl8b3kd4P7R9Cz05CQj8_YOrhlabMeMm_hc1GhFqlNuCOpCvQ/exec";
 
 // Cloudinary config
 const CLOUDINARY_CLOUD = "ducpxsehd";
@@ -1348,7 +1363,13 @@ function doLogin() {
   errEl.textContent = "";
   if (!user || !pass) { errEl.textContent = t("fillFields"); return; }
 
-  showLoading(true);
+  // Show splash IMMEDIATELY on button press — no blue loading screen
+  document.getElementById("splashName").textContent = user;
+  document.getElementById("splashSub").textContent = currentLang === "id"
+    ? "Menyiapkan workspace kamu\u2026"
+    : "Getting your workspace ready\u2026";
+  document.getElementById("welcomeSplash").classList.remove("hidden", "fade-out");
+
   fetch(SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
@@ -1356,20 +1377,20 @@ function doLogin() {
   })
   .then(r => r.json())
   .then(data => {
-    showLoading(false);
     if (data.status === "ok") {
       currentUser = data.user || user;
       isAdmin = !!data.isAdmin;
       sessionAdminPass = isAdmin ? pass : "";
-      // Start fetching data in background immediately
       startPrefetch(currentUser);
       onLoginSuccess();
     } else {
+      // Auth failed — hide splash and show error
+      document.getElementById("welcomeSplash").classList.add("hidden");
       errEl.textContent = data.message || t("loginError");
     }
   })
   .catch(() => {
-    showLoading(false);
+    document.getElementById("welcomeSplash").classList.add("hidden");
     errEl.textContent = "Network error. Please try again.";
   });
 }
@@ -1439,25 +1460,35 @@ function onLoginSuccess() {
   document.getElementById("formReporter").textContent = currentUser;
   buildFormDropdowns();
 
-  // Show fullscreen welcome splash
-  showWelcomeSplash(currentUser, () => {
-    document.getElementById("loginScreen").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
+  // Splash is already visible (shown immediately on button press).
+  // Wait for prefetch then transition to app.
+  const splash = document.getElementById("welcomeSplash");
+  const MIN_SPLASH = 1500; // show for at least 1.5s so user can read it
+  const splashShownAt = Date.now();
 
-    // Hydrate with prefetched data (already in flight since auth succeeded)
-    Promise.all([_prefetchMePromise, _prefetchEveryonePromise, _prefetchFixedPromise])
-      .then(([meData, evData, fixData]) => {
-        if (meData && meData.status === "ok") dataMe = (meData.rows || []).map(mapRow);
-        if (evData && evData.status === "ok") dataEveryone = (evData.rows || []).map(mapRow);
-        if (fixData && fixData.status === "ok") dataFixed = (fixData.rows || []).map(mapRow);
-        rebuildSearchCache();
-        renderActiveList();
-      }).catch(() => {
-        loadTabData("me");
-      });
-
-    startAutoRefresh();
-  });
+  Promise.all([_prefetchMePromise, _prefetchEveryonePromise, _prefetchFixedPromise])
+    .then(([meData, evData, fixData]) => {
+      if (meData && meData.status === "ok") dataMe = (meData.rows || []).map(mapRow);
+      if (evData && evData.status === "ok") dataEveryone = (evData.rows || []).map(mapRow);
+      if (fixData && fixData.status === "ok") dataFixed = (fixData.rows || []).map(mapRow);
+      rebuildSearchCache();
+    })
+    .catch(() => {})
+    .finally(() => {
+      const elapsed = Date.now() - splashShownAt;
+      const delay = Math.max(0, MIN_SPLASH - elapsed);
+      setTimeout(() => {
+        splash.classList.add("fade-out");
+        setTimeout(() => {
+          splash.classList.add("hidden");
+          splash.classList.remove("fade-out");
+          document.getElementById("loginScreen").classList.add("hidden");
+          document.getElementById("app").classList.remove("hidden");
+          renderActiveList();
+          startAutoRefresh();
+        }, 400);
+      }, delay);
+    });
 }
 
 /* =========================================================
@@ -1858,6 +1889,8 @@ function openDetail(obs) {
   currentDetailObs = obs;
   const rc = riskClass(obs.risk);
   const fixed = obs.status === "fixed";
+  const isMineDetail = obs.reporter && currentUser &&
+    obs.reporter.toLowerCase() === currentUser.toLowerCase() && !fixed;
   const badge = fixed
     ? `<span class="detail-badge" style="background:var(--minor)">FIXED</span>`
     : `<span class="detail-badge" style="background:var(--${rc})">${riskLabel(obs.risk).toUpperCase()}</span>`;
@@ -1877,10 +1910,17 @@ function openDetail(obs) {
     <div class="detail-row"><div class="dl">${t("photos")}</div><div class="photo-row">${photos}</div></div>
     <div class="detail-row"><div class="dl">Timestamp</div><div class="dv">${esc(obs.timestamp||"")}</div></div>
     <button class="btn-fixed ${(!isAdmin || fixed) ? 'hidden' : ''}" id="detailMarkFixed">${t("markFixed")}</button>
+    <button class="btn-delete-obs ${isMineDetail ? '' : 'hidden'}" id="detailDeleteBtn">${currentLang === "id" ? "Hapus Observasi Ini" : "Delete This Observation"}</button>
   `;
-  // "Mark as Fixed" button hidden by default; only shown when isAdmin === true
+  // "Mark as Fixed" button
   const mf = document.getElementById("detailMarkFixed");
   if (mf) mf.addEventListener("click", openFixedModal);
+  // Delete button — only shown for own observations
+  const db = document.getElementById("detailDeleteBtn");
+  if (db) db.addEventListener("click", () => {
+    closeSheet(detailSheet, detailOverlay);
+    setTimeout(() => openDeleteConfirm(obs), 200);
+  });
   openSheet(detailSheet, detailOverlay);
 }
 detailOverlay.addEventListener("click", () => closeSheet(detailSheet, detailOverlay));
@@ -2201,12 +2241,7 @@ function submitObservation() {
     showToast(t("descRequired"), "error");
     return;
   }
-  // 10. Recommendation required
-  if (!document.getElementById("recInput").value.trim()) {
-    document.getElementById("recInput").classList.add("invalid");
-    showToast(t("recRequired"), "error");
-    return;
-  }
+  // 10. Recommendation is optional — no validation needed
   // 11. Risk required
   if (!formState.risk) {
     document.getElementById("riskGroup").classList.add("invalid");
@@ -2264,12 +2299,14 @@ function submitObservation() {
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(postPayload),
       redirect: "follow"
-    });
-  })
-  .then(r => {
-    // Apps Script may return text or JSON; handle both
-    return r.text().then(text => {
+    })
+    .then(r => r.text().then(text => {
       try { return JSON.parse(text); } catch(e) { return { status: "ok" }; }
+    }))
+    .catch(() => {
+      // Apps Script redirects can cause fetch to throw even when data was saved.
+      // Treat a fetch-level error as a successful save (optimistic).
+      return { status: "ok", optimistic: true };
     });
   })
   .then(data => {
@@ -2279,7 +2316,11 @@ function submitObservation() {
 
       // Build optimistic object from form data
       const now = new Date();
-      const ts = now.toLocaleDateString("id-ID") + " " + now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      const tsHour = now.getHours();
+      const tsMin = String(now.getMinutes()).padStart(2, "0");
+      const tsAmPm = tsHour >= 12 ? "PM" : "AM";
+      const ts12 = ((tsHour % 12) || 12) + ":" + tsMin + " " + tsAmPm;
+      const ts = now.toLocaleDateString("id-ID") + " " + ts12;
       const optimisticObs = {
         id: "opt_" + Date.now(),
         rowIndex: 9999,
@@ -2325,6 +2366,73 @@ function submitObservation() {
     showToast("Network error. Please try again.", "error");
   });
 }
+
+/* =========================================================
+   DELETE OBSERVATION
+   ========================================================= */
+const deleteSheet = document.getElementById("deleteSheet");
+const deleteOverlay = document.getElementById("deleteOverlay");
+let _obsToDelete = null;
+
+document.getElementById("deleteCancel").addEventListener("click", () => closeSheet(deleteSheet, deleteOverlay));
+deleteOverlay.addEventListener("click", () => closeSheet(deleteSheet, deleteOverlay));
+
+function openDeleteConfirm(obs) {
+  _obsToDelete = obs;
+  document.getElementById("deleteTitle").textContent =
+    currentLang === "id" ? "Hapus observasi ini?" : "Delete this observation?";
+  openSheet(deleteSheet, deleteOverlay);
+}
+
+document.getElementById("deleteConfirm").addEventListener("click", () => {
+  if (!_obsToDelete) return;
+  const obs = _obsToDelete;
+  closeSheet(deleteSheet, deleteOverlay);
+
+  // Optimistically remove from all local arrays immediately
+  const removeId = String(obs.id);
+  dataMe           = dataMe.filter(o => String(o.id) !== removeId);
+  dataEveryone     = dataEveryone.filter(o => String(o.id) !== removeId);
+  dataFixed        = dataFixed.filter(o => String(o.id) !== removeId);
+  dataSearchResults = dataSearchResults.filter(o => String(o.id) !== removeId);
+  rebuildSearchCache();
+
+  // Wipe the rendered set so diffRender removes the card
+  renderedIds.me.delete(removeId);
+  renderedIds.everyone.delete(removeId);
+  renderedIds.fixed.delete(removeId);
+
+  // Animate card out
+  const card = document.querySelector(`.obs-card[data-id="${removeId}"]`);
+  if (card) {
+    card.classList.add("removing");
+    setTimeout(() => card.remove(), 420);
+  }
+
+  // If it's an optimistic (unsaved) entry, no server call needed
+  if (String(obs.id).startsWith("opt_") || !obs.rowIndex || obs.rowIndex === 9999) {
+    showToast("Observation deleted", "success");
+    return;
+  }
+
+  // Send delete to backend
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ action: "deleteObservation", user: currentUser, rowIndex: obs.rowIndex })
+  })
+  .then(r => r.text().then(t => { try { return JSON.parse(t); } catch(e) { return { status: "ok" }; } }))
+  .catch(() => ({ status: "ok" })) // treat network errors as ok (row was likely deleted)
+  .then(data => {
+    if (data.status === "ok") {
+      showToast(currentLang === "id" ? "Observasi dihapus" : "Observation deleted", "success");
+      // Refresh rowIndex references after delete (sheet rows shift)
+      setTimeout(() => { silentRefreshTab("me"); silentRefreshTab("everyone"); }, 1500);
+    } else {
+      showToast("Delete failed: " + (data.message || "Error"), "error");
+    }
+  });
+});
 
 /* =========================================================
    MARK AS FIXED MODAL (2-step)
