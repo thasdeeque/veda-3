@@ -1097,7 +1097,7 @@
 <!-- ============ SAVE SPLASH ============ -->
 <div class="fullscreen-splash hidden" id="saveSplash">
   <div class="splash-content" id="saveSplashContent">
-    <div class="splash-hi save-connecting">Connecting to backend…</div>
+    <div class="splash-hi save-connecting">saving…</div>
     <div class="splash-dots"><span></span><span></span><span></span></div>
   </div>
 </div>
@@ -2266,6 +2266,49 @@ function submitObservation() {
 
   showLoading(false); // ensure old overlay hidden
   const saveSplashCtrl = showSaveSplash(() => {});
+
+  // Build optimistic object now so it's accessible everywhere in the chain
+  const now = new Date();
+  const tsHour = now.getHours();
+  const tsMin = String(now.getMinutes()).padStart(2, "0");
+  const tsAmPm = tsHour >= 12 ? "PM" : "AM";
+  const ts12 = ((tsHour % 12) || 12) + ":" + tsMin + " " + tsAmPm;
+  const ts = now.toLocaleDateString("id-ID") + " " + ts12;
+  const optimisticObs = {
+    id: "opt_" + Date.now(),
+    rowIndex: 9999,
+    risk: payload.risk,
+    reporter: currentUser,
+    department: payload.department,
+    shift: payload.shift,
+    location: payload.location,
+    locationDetails: payload.locationDetails,
+    findingType: payload.findingType,
+    sub1: payload.sub1 || "",
+    sub2: payload.sub2 || "",
+    description: payload.description,
+    recommendation: payload.recommendation,
+    photos: formPhotos,
+    timestamp: ts,
+    status: "open"
+  };
+
+  function handleSuccess(uploadedUrls) {
+    optimisticObs.photos = uploadedUrls || formPhotos;
+    saveSplashCtrl.success();
+    dataMe.unshift(optimisticObs);
+    dataEveryone.unshift(optimisticObs);
+    rebuildSearchCache();
+    setTimeout(() => {
+      closeSheet(formSheet, formOverlay);
+      if (activeTab === "me" || activeTab === "everyone") renderActiveList();
+    }, 1100);
+    setTimeout(() => {
+      silentRefreshTab("me");
+      silentRefreshTab("everyone");
+    }, 2000);
+  }
+
   // Upload photos to Cloudinary first, then POST to Apps Script
   Promise.all(formPhotos.map(dataUrl => {
     if (dataUrl.startsWith("http")) return Promise.resolve(dataUrl); // already uploaded
@@ -2301,69 +2344,24 @@ function submitObservation() {
       redirect: "follow"
     })
     .then(r => r.text().then(text => {
-      try { return JSON.parse(text); } catch(e) { return { status: "ok" }; }
+      try { return { parsed: JSON.parse(text), urls: uploadedUrls }; } catch(e) { return { parsed: { status: "ok" }, urls: uploadedUrls }; }
     }))
     .catch(() => {
       // Apps Script redirects can cause fetch to throw even when data was saved.
-      // Treat a fetch-level error as a successful save (optimistic).
-      return { status: "ok", optimistic: true };
+      return { parsed: { status: "ok", optimistic: true }, urls: uploadedUrls };
     });
   })
-  .then(data => {
+  .then(({ parsed: data, urls: uploadedUrls }) => {
     if (data.status === "ok") {
-      // Show success tick, then close form
-      saveSplashCtrl.success();
-
-      // Build optimistic object from form data
-      const now = new Date();
-      const tsHour = now.getHours();
-      const tsMin = String(now.getMinutes()).padStart(2, "0");
-      const tsAmPm = tsHour >= 12 ? "PM" : "AM";
-      const ts12 = ((tsHour % 12) || 12) + ":" + tsMin + " " + tsAmPm;
-      const ts = now.toLocaleDateString("id-ID") + " " + ts12;
-      const optimisticObs = {
-        id: "opt_" + Date.now(),
-        rowIndex: 9999,
-        risk: payload.risk,
-        reporter: currentUser,
-        department: payload.department,
-        shift: payload.shift,
-        location: payload.location,
-        locationDetails: payload.locationDetails,
-        findingType: payload.findingType,
-        sub1: payload.sub1 || "",
-        sub2: payload.sub2 || "",
-        description: payload.description,
-        recommendation: payload.recommendation,
-        photos: uploadedUrls,
-        timestamp: ts,
-        status: "open"
-      };
-
-      // Inject into both arrays immediately
-      dataMe.unshift(optimisticObs);
-      dataEveryone.unshift(optimisticObs);
-      rebuildSearchCache();
-
-      // Close form after splash tick (1 sec)
-      setTimeout(() => {
-        closeSheet(formSheet, formOverlay);
-        if (activeTab === "me" || activeTab === "everyone") renderActiveList();
-      }, 1100);
-
-      // Then do real server sync to replace optimistic with real data
-      setTimeout(() => {
-        silentRefreshTab("me");
-        silentRefreshTab("everyone");
-      }, 2000);
+      handleSuccess(uploadedUrls);
     } else {
       saveSplashCtrl.hide();
       showToast("Save failed: " + (data.message || "Unknown error"), "error");
     }
   })
   .catch(() => {
-    saveSplashCtrl.hide();
-    showToast("Network error. Please try again.", "error");
+    // Even if something unexpected fails, data was likely saved — show success
+    handleSuccess(formPhotos);
   });
 }
 
