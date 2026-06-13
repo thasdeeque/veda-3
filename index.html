@@ -219,7 +219,7 @@
   .content {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 16px 120px;
+    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 110px);
     -webkit-overflow-scrolling: touch;
   }
   .tab-page { display: none; }
@@ -235,6 +235,20 @@
 
   /* ============ OBSERVATION CARD ============ */
   @keyframes cardEnter { from { opacity:0; transform: translateY(24px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+  @keyframes criticalPulse {
+    0%, 100% { box-shadow: 0 2px 10px rgba(255,59,48,0.25); border-color: rgba(255,59,48,0.3); }
+    50% { box-shadow: 0 4px 24px rgba(255,59,48,0.6); border-color: rgba(255,59,48,0.7); }
+  }
+  .obs-card.risk-critical { animation: cardEnter 0.45s cubic-bezier(0.22,1,0.36,1) both, criticalPulse 2s ease-in-out infinite; }
+  .obs-card.risk-critical .obs-strip { background: var(--critical); }
+
+  /* card slide-out for fixed removal */
+  @keyframes cardExit { from { opacity:1; transform: translateX(0) scale(1); max-height: 200px; margin-bottom: 12px; } to { opacity:0; transform: translateX(60px) scale(0.96); max-height: 0; margin-bottom: 0; padding: 0; } }
+  .obs-card.removing { animation: cardExit 0.4s cubic-bezier(0.22,1,0.36,1) forwards; overflow: hidden; pointer-events: none; }
+
+  /* card slide-in for new cards */
+  @keyframes cardSlideIn { from { opacity:0; transform: translateY(-20px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+  .obs-card.new-card { animation: cardSlideIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
   @keyframes fadeSlideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
   @keyframes logoPop { 0%{transform:scale(0) rotate(-20deg);opacity:0;} 60%{transform:scale(1.15) rotate(5deg);opacity:1;} 100%{transform:scale(1) rotate(0);opacity:1;} }
   @keyframes pulseGlow { 0%,100% { box-shadow: 0 6px 20px rgba(41,121,255,0.45); } 50% { box-shadow: 0 6px 32px rgba(41,121,255,0.7); } }
@@ -552,8 +566,10 @@
   .photo-up-thumb { position: relative; width: 70px; height: 70px; border-radius: 12px; overflow: hidden; background: var(--input-bg); }
   .photo-up-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .photo-up-thumb .rm {
-    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%;
-    background: rgba(0,0,0,0.7); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;
+    position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(0,0,0,0.75); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px;
+    /* larger invisible tap area */
+    padding: 4px;
   }
 
   /* ============ TOAST ============ */
@@ -572,25 +588,67 @@
   .toast.info { background: var(--accent); }
 
   /* ============ AI CHAT MODAL ============ */
-  #aiModal { z-index: 80; }
+  #aiModal {
+    z-index: 80;
+    height: 100dvh;
+    height: -webkit-fill-available;
+  }
   .ai-header { background: var(--card); }
   .ai-header .sh-title { color: var(--purple); }
-  .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  .bubble { max-width: 80%; padding: 11px 14px; border-radius: 16px; font-size: 14px; line-height: 1.45; animation: bubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bubble {
+    max-width: 82%;
+    padding: 11px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    animation: bubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
   .bubble.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
   .bubble.ai { align-self: flex-start; background: var(--input-bg); color: var(--text); border-bottom-left-radius: 4px; }
-  .typing { display: flex; gap: 4px; align-self: flex-start; padding: 14px; }
+  .typing { display: flex; gap: 4px; align-self: flex-start; padding: 14px; background: var(--input-bg); border-radius: 16px; border-bottom-left-radius: 4px; }
   .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--text-secondary); animation: blink 1.2s infinite; }
   .typing span:nth-child(2) { animation-delay: 0.2s; }
   .typing span:nth-child(3) { animation-delay: 0.4s; }
+  /* thinking label next to dots */
+  .typing-label { font-size: 12px; color: var(--text-secondary); align-self: flex-end; margin-bottom: 2px; font-style: italic; animation: fadeSlideUp 0.3s ease both; }
   @keyframes blink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
   @keyframes bubblePop { from { opacity:0; transform: translateY(10px) scale(0.95); } to { opacity:1; transform: translateY(0) scale(1); } }
   .chat-input-bar {
-    display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border);
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); flex-shrink: 0; background: var(--card);
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--card);
   }
-  .chat-input-bar input { flex: 1; }
-  .chat-send { width: 46px; background: var(--purple); border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chat-input-bar input {
+    flex: 1;
+    min-height: 44px;
+  }
+  .chat-send {
+    width: 48px;
+    height: 48px;
+    background: var(--purple);
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
 
   /* search */
   .search-bar-wrap { position: relative; margin-bottom: 14px; }
@@ -600,8 +658,49 @@
   .filter-opt { flex: 1; text-align: center; padding: 8px 0; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s ease; }
   .filter-opt.active { background: var(--accent); color: #fff; }
 
-  /* modal small (photo source / confirm / bug) */
+  /* modal small (confirm / bug) */
   .modal-sheet { padding: 8px 20px 24px; }
+
+  /* centered photo source modal */
+  .center-modal-wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 90;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .center-modal-wrap.show { opacity: 1; pointer-events: auto; }
+  .center-modal-wrap .cm-bg {
+    position: absolute; inset: 0;
+    background: var(--overlay);
+  }
+  .center-modal {
+    position: relative;
+    width: 100%; max-width: 320px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transform: scale(0.92) translateY(12px);
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 1;
+  }
+  .center-modal-wrap.show .center-modal { transform: scale(1) translateY(0); }
+  .center-modal .cm-title { font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 20px; }
+  .cm-opt {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 12px; font-size: 16px; font-weight: 600;
+    border-radius: 12px; transition: background 0.15s ease;
+    cursor: pointer;
+  }
+  .cm-opt:active { background: var(--input-bg); }
+  .cm-opt svg { color: var(--accent); flex-shrink: 0; }
+  .cm-cancel {
+    width: 100%; margin-top: 12px;
+    background: var(--input-bg); color: var(--text);
+    padding: 14px; border-radius: 12px; font-weight: 700; font-size: 15px;
+  }
   .modal-opt { display: flex; align-items: center; gap: 14px; padding: 16px 4px; font-size: 16px; border-bottom: 1px solid var(--border); }
   .modal-opt:last-of-type { border-bottom: none; }
   .modal-opt svg { color: var(--accent); }
@@ -860,27 +959,27 @@
   </div>
   <div class="chat-area" id="chatArea"></div>
   <div class="chat-input-bar">
-    <input class="text-input" id="chatInput" data-i18n-ph="askVeda" placeholder="Ask Veda AI..." />
+    <input class="text-input" id="chatInput" data-i18n-ph="askVeda" placeholder="Ask Veda AI..." autocomplete="off" autocorrect="off" spellcheck="false" />
     <button class="chat-send" id="chatSend" aria-label="Send">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </div>
 </div>
 
-<!-- ============ PHOTO SOURCE MODAL ============ -->
-<div class="overlay-bg" id="photoSrcOverlay"></div>
-<div class="sheet" id="photoSrcSheet">
-  <div class="drag-handle"></div>
-  <div class="sheet-body modal-sheet">
-    <div class="modal-opt" id="optCamera">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+<!-- ============ PHOTO SOURCE MODAL (centered) ============ -->
+<div class="center-modal-wrap" id="photoSrcWrap">
+  <div class="cm-bg" id="photoSrcOverlay"></div>
+  <div class="center-modal">
+    <div class="cm-title">Add Photo</div>
+    <div class="cm-opt" id="optCamera">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
       <span data-i18n="takePhoto">Take Photo</span>
     </div>
-    <div class="modal-opt" id="optGallery">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 17l-5-5L5 19"/></svg>
+    <div class="cm-opt" id="optGallery">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 17l-5-5L5 19"/></svg>
       <span data-i18n="chooseGallery">Choose from Gallery</span>
     </div>
-    <button class="btn-secondary" id="photoSrcCancel" data-i18n="cancel">Cancel</button>
+    <button class="cm-cancel" id="photoSrcCancel" data-i18n="cancel">Cancel</button>
   </div>
 </div>
 
@@ -933,7 +1032,7 @@
    ========================================================= */
 
 // App Script Web App URL
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZhjLjfkjHQdmV2gNzaw9dCT7piphIulR2FlrHyijS1dwGckaH2PrUnkZNT5vzLbdBeg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyq9YXaFC7Wi-bTepENTXAwhOMpff_lnYLioK3yjFcW7Wskb49p173efW6SIUoglIlJvg/exec";
 
 // Cloudinary config
 const CLOUDINARY_CLOUD = "ducpxsehd";
@@ -950,7 +1049,8 @@ let searchFilterMode = "all";
 let formPhotos = [];          // uploaded photo data urls (max 5)
 let currentDetailObs = null;
 let fixedConfirmStep = 1;
-let autoRefreshTimer = null;
+let autoRefreshMeTimer = null;
+let autoRefreshEveryoneTimer = null;
 
 // form selection state
 const formState = {
@@ -1230,6 +1330,10 @@ function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".nav-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".tab-page").forEach(p => p.classList.toggle("active", p.id === "page-" + tab));
+  // Reset rendered set so full render fires on tab switch
+  if (tab === "me") { renderedIds.me.clear(); document.getElementById("list-me").innerHTML = ""; }
+  else if (tab === "everyone") { renderedIds.everyone.clear(); document.getElementById("list-everyone").innerHTML = ""; }
+  else if (tab === "fixed") { renderedIds.fixed.clear(); document.getElementById("list-fixed").innerHTML = ""; }
   loadTabData(tab);
 }
 
@@ -1302,10 +1406,13 @@ function loadTabData(tab) {
 }
 
 /* =========================================================
-   CARD RENDERING
+   DIFF-BASED CARD RENDERER
+   — Never wipes innerHTML. Only injects new cards at top,
+     removes fixed cards with slide-out animation.
    ========================================================= */
-function riskClass(risk) { return risk === "critical" ? "critical" : risk === "major" ? "major" : "minor"; }
-function riskLabel(risk) { return t(risk); }
+
+// Track which IDs are currently rendered per list
+const renderedIds = { me: new Set(), everyone: new Set(), fixed: new Set() };
 
 function obsCardHTML(obs, opts = {}) {
   const rc = riskClass(obs.risk);
@@ -1332,7 +1439,7 @@ function obsCardHTML(obs, opts = {}) {
       </div>`;
   const topHTML = `<div class="obs-top${photoHTML ? "" : " no-photo"}">${photoHTML}${infoHTML}</div>`;
   return `
-    <div class="obs-card" data-id="${obs.id}">
+    <div class="obs-card ${obs.risk === 'critical' ? 'risk-critical' : ''}" data-id="${obs.id}">
       <div class="obs-strip strip-${rc}"></div>
       ${badge}
       ${topHTML}
@@ -1341,29 +1448,105 @@ function obsCardHTML(obs, opts = {}) {
     </div>`;
 }
 
-function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function diffRenderList(listEl, newData, setKey, opts = {}) {
+  const set = renderedIds[setKey];
+  const newIds = new Set(newData.map(o => String(o.id)));
 
-function emptyState(icon, text) {
-  return `<div class="empty-state"><div class="empty-ill">${icon}</div><p>${text}</p></div>`;
+  // 1. Remove cards that are now fixed (disappeared from open list)
+  //    or removed from fixed list
+  set.forEach(id => {
+    if (!newIds.has(id)) {
+      const card = listEl.querySelector(`.obs-card[data-id="${id}"]`);
+      if (card) {
+        card.classList.add("removing");
+        setTimeout(() => { card.remove(); }, 420);
+      }
+      set.delete(id);
+    }
+  });
+
+  // 2. Inject new cards at top (prepend)
+  // Reverse so newest ends up at very top after prepending
+  const toAdd = newData.filter(o => !set.has(String(o.id)));
+  toAdd.reverse().forEach(obs => {
+    const html = obsCardHTML(obs, opts);
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html.trim();
+    const card = tmp.firstChild;
+    card.classList.add("new-card");
+    // Remove initial cardEnter so new-card animation takes over
+    card.style.animationName = "cardSlideIn";
+    listEl.prepend(card);
+    set.add(String(obs.id));
+  });
+
+  // 3. Show/hide empty state
+  let emptyEl = listEl.querySelector(".empty-state");
+  if (set.size === 0) {
+    if (!emptyEl) {
+      const icon = setKey === "fixed" ? ICON_CHECK : ICON_DOC;
+      const msg = setKey === "fixed" ? t("noFixedYet") : setKey === "me" ? t("noObsYet") : t("noOpenObs");
+      listEl.innerHTML = emptyState(icon, msg);
+    }
+  } else {
+    if (emptyEl) emptyEl.remove();
+  }
 }
-const ICON_DOC = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
-const ICON_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><polyline points="20 6 9 17 4 12"/></svg>`;
-const ICON_SEARCH = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
 function renderActiveList() {
   if (activeTab === "me") {
     const el = document.getElementById("list-me");
-    el.innerHTML = dataMe.length ? dataMe.map(o => obsCardHTML(o)).join("") : emptyState(ICON_DOC, t("noObsYet"));
+    if (!renderedIds.me.size && !dataMe.length) {
+      el.innerHTML = emptyState(ICON_DOC, t("noObsYet"));
+    } else {
+      diffRenderList(el, dataMe, "me");
+    }
   } else if (activeTab === "everyone") {
     const el = document.getElementById("list-everyone");
-    el.innerHTML = dataEveryone.length ? dataEveryone.map(o => obsCardHTML(o)).join("") : emptyState(ICON_DOC, t("noOpenObs"));
+    if (!renderedIds.everyone.size && !dataEveryone.length) {
+      el.innerHTML = emptyState(ICON_DOC, t("noOpenObs"));
+    } else {
+      diffRenderList(el, dataEveryone, "everyone");
+    }
   } else if (activeTab === "fixed") {
     const el = document.getElementById("list-fixed");
-    el.innerHTML = dataFixed.length ? dataFixed.slice(0,20).map(o => obsCardHTML(o, {fixed:true})).join("") : emptyState(ICON_CHECK, t("noFixedYet"));
+    if (!renderedIds.fixed.size && !dataFixed.length) {
+      el.innerHTML = emptyState(ICON_CHECK, t("noFixedYet"));
+    } else {
+      diffRenderList(el, dataFixed.slice(0, 20), "fixed", { fixed: true });
+    }
   } else if (activeTab === "search") {
     renderSearch();
   }
 }
+
+// Full reset render (used on tab switch when set is empty)
+function fullRenderList(listEl, data, setKey, opts = {}) {
+  renderedIds[setKey].clear();
+  listEl.innerHTML = "";
+  if (!data.length) {
+    const icon = setKey === "fixed" ? ICON_CHECK : ICON_DOC;
+    const msg = setKey === "fixed" ? t("noFixedYet") : setKey === "me" ? t("noObsYet") : t("noOpenObs");
+    listEl.innerHTML = emptyState(icon, msg);
+    return;
+  }
+  data.forEach(obs => {
+    const html = obsCardHTML(obs, opts);
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html.trim();
+    const card = tmp.firstChild;
+    listEl.appendChild(card);
+    renderedIds[setKey].add(String(obs.id));
+  });
+}
+
+function riskClass(risk) { return risk === "critical" ? "critical" : risk === "major" ? "major" : "minor"; }
+function riskLabel(risk) { return t(risk); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function emptyState(icon, text) { return `<div class="empty-state"><div class="empty-ill">${icon}</div><p>${text}</p></div>`; }
+const ICON_DOC = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
+const ICON_CHECK = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_SEARCH = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
 /* card tap → detail (or photo tap → fullscreen viewer) */
 document.querySelector(".content").addEventListener("click", e => {
@@ -1585,6 +1768,15 @@ function buildDropdown(container, options, placeholder, selectedValue, onSelect)
   trigger.addEventListener("click", () => {
     document.querySelectorAll(".dropdown.open").forEach(d => { if (d !== dd) d.classList.remove("open"); });
     dd.classList.toggle("open");
+    // Scroll dropdown into view if near bottom of screen
+    if (dd.classList.contains("open")) {
+      setTimeout(() => {
+        const rect = menu.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 20) {
+          menu.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }, 50);
+    }
   });
   dd.appendChild(trigger); dd.appendChild(menu);
   container.appendChild(dd);
@@ -1700,7 +1892,7 @@ document.getElementById("riskGroup").addEventListener("click", e => {
 document.getElementById("formBody").addEventListener("input", e => {
   if (e.target.classList.contains("text-input")) e.target.classList.remove("invalid");
 });
-document.getElementById("photoAddBtn").addEventListener("click", () => openSheet(photoSrcSheet, photoSrcOverlay));
+document.getElementById("photoAddBtn").addEventListener("click", () => openPhotoSrc());
 function renderPhotoThumbs() {
   const row = document.getElementById("photoUploadRow");
   const thumbs = formPhotos.map((src, i) =>
@@ -1711,25 +1903,26 @@ function renderPhotoThumbs() {
     : "";
   row.innerHTML = thumbs + addBtn;
   const newAdd = document.getElementById("photoAddBtn");
-  if (newAdd) newAdd.addEventListener("click", () => openSheet(photoSrcSheet, photoSrcOverlay));
+  if (newAdd) newAdd.addEventListener("click", () => openPhotoSrc());
   row.querySelectorAll(".rm").forEach(x => x.addEventListener("click", () => {
     formPhotos.splice(+x.dataset.i, 1); renderPhotoThumbs();
   }));
 }
 
 /* photo source modal */
-const photoSrcSheet = document.getElementById("photoSrcSheet");
-const photoSrcOverlay = document.getElementById("photoSrcOverlay");
-document.getElementById("photoSrcCancel").addEventListener("click", () => closeSheet(photoSrcSheet, photoSrcOverlay));
-photoSrcOverlay.addEventListener("click", () => closeSheet(photoSrcSheet, photoSrcOverlay));
+const photoSrcWrap = document.getElementById("photoSrcWrap");
+function openPhotoSrc() { photoSrcWrap.classList.add("show"); }
+function closePhotoSrc() { photoSrcWrap.classList.remove("show"); }
+document.getElementById("photoSrcCancel").addEventListener("click", closePhotoSrc);
+document.getElementById("photoSrcOverlay").addEventListener("click", closePhotoSrc);
 
 const hiddenFile = document.createElement("input");
 hiddenFile.type = "file"; hiddenFile.accept = "image/*";
 const hiddenCam = document.createElement("input");
 hiddenCam.type = "file"; hiddenCam.accept = "image/*"; hiddenCam.capture = "environment";
 
-document.getElementById("optCamera").addEventListener("click", () => { hiddenCam.click(); closeSheet(photoSrcSheet, photoSrcOverlay); });
-document.getElementById("optGallery").addEventListener("click", () => { hiddenFile.click(); closeSheet(photoSrcSheet, photoSrcOverlay); });
+document.getElementById("optCamera").addEventListener("click", () => { hiddenCam.click(); closePhotoSrc(); });
+document.getElementById("optGallery").addEventListener("click", () => { hiddenFile.click(); closePhotoSrc(); });
 
 function handleFile(input) {
   const file = input.files[0];
@@ -1900,8 +2093,42 @@ function submitObservation() {
     if (data.status === "ok") {
       closeSheet(formSheet, formOverlay);
       showToast(t("saved"), "success");
-      loadTabData("me");
-      if (activeTab !== "me") loadTabData(activeTab);
+
+      // Build optimistic object from form data
+      const now = new Date();
+      const ts = now.toLocaleDateString("id-ID") + " " + now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      const optimisticObs = {
+        id: "opt_" + Date.now(),
+        rowIndex: 9999,
+        risk: payload.risk,
+        reporter: currentUser,
+        department: payload.department,
+        shift: payload.shift,
+        location: payload.location,
+        locationDetails: payload.locationDetails,
+        findingType: payload.findingType,
+        sub1: payload.sub1 || "",
+        sub2: payload.sub2 || "",
+        description: payload.description,
+        recommendation: payload.recommendation,
+        photos: uploadedUrls,
+        timestamp: ts,
+        status: "open"
+      };
+
+      // Inject into both arrays immediately
+      dataMe.unshift(optimisticObs);
+      dataEveryone.unshift(optimisticObs);
+      rebuildSearchCache();
+
+      // Render immediately — diff will inject just this one card
+      if (activeTab === "me" || activeTab === "everyone") renderActiveList();
+
+      // Then do real server sync to replace optimistic with real data
+      setTimeout(() => {
+        silentRefreshTab("me");
+        silentRefreshTab("everyone");
+      }, 2000);
     } else {
       showToast("Save failed: " + (data.message || "Unknown error"), "error");
     }
@@ -2006,19 +2233,36 @@ function addBubble(text, who) {
   chatArea.scrollTop = chatArea.scrollHeight;
   return b;
 }
-document.getElementById("chatSend").addEventListener("click", sendChat);
-document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
 function sendChat() {
   const inp = document.getElementById("chatInput");
   const msg = inp.value.trim();
   if (!msg) return;
   addBubble(msg, "user");
   inp.value = "";
+
+  // Rotating thinking messages
+  const thinkingMsgs = [
+    "Checking the data...",
+    "Analyzing...",
+    "One sec...",
+    "Looking into it...",
+    "Reading the reports...",
+    "Running the numbers..."
+  ];
+  const thinkMsg = thinkingMsgs[Math.floor(Math.random() * thinkingMsgs.length)];
+
+  // Thinking label
+  const label = document.createElement("div");
+  label.className = "typing-label";
+  label.textContent = thinkMsg;
+  chatArea.appendChild(label);
+
   const typing = document.createElement("div");
   typing.className = "typing";
   typing.innerHTML = "<span></span><span></span><span></span>";
   chatArea.appendChild(typing);
   chatArea.scrollTop = chatArea.scrollHeight;
+
   // Build message history from chat bubbles
   const chatHistory = [];
   document.querySelectorAll("#chatArea .bubble").forEach(b => {
@@ -2031,6 +2275,7 @@ function sendChat() {
   })
   .then(r => r.json())
   .then(data => {
+    label.remove();
     typing.remove();
     if (data.status === "ok" && data.reply) {
       addBubble(data.reply, "ai");
@@ -2039,23 +2284,62 @@ function sendChat() {
     }
   })
   .catch(() => {
+    label.remove();
     typing.remove();
     addBubble("Network error. Please try again.", "ai");
   });
 }
 
+// Scroll chat to bottom when keyboard opens on mobile
+document.getElementById("chatInput").addEventListener("focus", () => {
+  setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 350);
+});
+
 /* =========================================================
-   AUTO-REFRESH (every 30s)
+   AUTO-REFRESH
+   — Everyone: every 10s (background, diff-based, no flicker)
+   — Me: every 30s
    ========================================================= */
+let autoRefreshMeTimer = null;
+let autoRefreshEveryoneTimer = null;
+
+function silentRefreshTab(tab) {
+  // Fetch data silently, update arrays, then diff-render
+  if (tab === "me") {
+    fetch(SCRIPT_URL + "?name=" + encodeURIComponent(currentUser))
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") {
+          dataMe = (data.rows || []).map(mapRow);
+          rebuildSearchCache();
+          if (activeTab === "me") renderActiveList();
+          if (activeTab === "search") runLocalSearch();
+        }
+      }).catch(() => {});
+  } else if (tab === "everyone") {
+    fetch(SCRIPT_URL)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok") {
+          dataEveryone = (data.rows || []).map(mapRow);
+          rebuildSearchCache();
+          if (activeTab === "everyone") renderActiveList();
+          if (activeTab === "search") runLocalSearch();
+        }
+      }).catch(() => {});
+  }
+}
+
 function startAutoRefresh() {
   stopAutoRefresh();
-  autoRefreshTimer = setInterval(() => {
-    // BACKEND: auto-refresh here  (refresh current tab feed)
-    loadTabData(activeTab);
-  }, 30000);
+  // Everyone refreshes every 10s — diff-based so no flicker
+  autoRefreshEveryoneTimer = setInterval(() => silentRefreshTab("everyone"), 10000);
+  // Me refreshes every 30s
+  autoRefreshMeTimer = setInterval(() => silentRefreshTab("me"), 30000);
 }
 function stopAutoRefresh() {
-  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  if (autoRefreshMeTimer) { clearInterval(autoRefreshMeTimer); autoRefreshMeTimer = null; }
+  if (autoRefreshEveryoneTimer) { clearInterval(autoRefreshEveryoneTimer); autoRefreshEveryoneTimer = null; }
 }
 
 /* =========================================================
