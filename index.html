@@ -712,6 +712,50 @@
   .btn-confirm { background: var(--accent); color: #fff; }
   .btn-danger { background: var(--critical); color: #fff; }
 
+  /* ============ FULLSCREEN SPLASH ============ */
+  .fullscreen-splash {
+    position: fixed; inset: 0; z-index: 300;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+  .fullscreen-splash.hidden { display: none; }
+  .fullscreen-splash.fade-out { opacity: 0; pointer-events: none; }
+  .splash-content { text-align: center; }
+  .splash-hi {
+    font-size: 32px; font-weight: 800; color: var(--text);
+    animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+    margin-bottom: 12px;
+  }
+  .splash-sub {
+    font-size: 16px; color: var(--text-secondary);
+    animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+    margin-bottom: 24px;
+  }
+  .save-connecting { font-size: 24px; }
+  .splash-dots {
+    display: flex; justify-content: center; gap: 8px;
+    animation: fadeSlideUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.2s both;
+  }
+  .splash-dots span {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: dotBounce 1.2s ease-in-out infinite;
+  }
+  .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotBounce { 0%,80%,100% { transform: scale(0.6); opacity:0.4; } 40% { transform: scale(1); opacity:1; } }
+
+  /* Success tick */
+  .splash-success-bg { background: #16a34a !important; }
+  .splash-tick {
+    width: 88px; height: 88px; border-radius: 50%; background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+    animation: tickPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    color: #fff;
+  }
+  .splash-tick-label { font-size: 22px; font-weight: 800; color: #fff; animation: fadeSlideUp 0.4s both 0.1s; }
+  @keyframes tickPop { from { transform:scale(0) rotate(-20deg); opacity:0; } to { transform:scale(1) rotate(0); opacity:1; } }
+
   .success-screen { text-align: center; padding: 60px 20px; }
   .success-check { width: 80px; height: 80px; border-radius: 50%; background: var(--minor); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #fff; }
 </style>
@@ -1023,8 +1067,25 @@
   <div class="iv-counter" id="ivCounter"></div>
 </div>
 
-<!-- ============ LOADING OVERLAY ============ -->
+<!-- ============ LOADING OVERLAY (spinner for small ops) ============ -->
 <div class="loading-overlay hidden" id="loadingOverlay"><div class="spinner"></div></div>
+
+<!-- ============ WELCOME SPLASH ============ -->
+<div class="fullscreen-splash hidden" id="welcomeSplash">
+  <div class="splash-content">
+    <div class="splash-hi" id="splashHi">Hi, <span id="splashName"></span></div>
+    <div class="splash-sub" id="splashSub">Getting your workspace ready…</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- ============ SAVE SPLASH ============ -->
+<div class="fullscreen-splash hidden" id="saveSplash">
+  <div class="splash-content" id="saveSplashContent">
+    <div class="splash-hi save-connecting">Connecting to backend…</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
 
 <script>
 /* =========================================================
@@ -1266,6 +1327,20 @@ document.getElementById("pwToggle").addEventListener("click", () => {
 document.getElementById("loginBtn").addEventListener("click", doLogin);
 document.getElementById("loginPass").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
 
+// Pre-fetch promises stored during login splash
+let _prefetchMePromise = null;
+let _prefetchEveryonePromise = null;
+let _prefetchFixedPromise = null;
+
+function startPrefetch(user) {
+  _prefetchMePromise = fetch(SCRIPT_URL + "?name=" + encodeURIComponent(user))
+    .then(r => r.json()).catch(() => null);
+  _prefetchEveryonePromise = fetch(SCRIPT_URL)
+    .then(r => r.json()).catch(() => null);
+  _prefetchFixedPromise = fetch(SCRIPT_URL + "?action=fixed")
+    .then(r => r.json()).catch(() => null);
+}
+
 function doLogin() {
   const user = document.getElementById("loginUser").value.trim();
   const pass = document.getElementById("loginPass").value;
@@ -1286,6 +1361,8 @@ function doLogin() {
       currentUser = data.user || user;
       isAdmin = !!data.isAdmin;
       sessionAdminPass = isAdmin ? pass : "";
+      // Start fetching data in background immediately
+      startPrefetch(currentUser);
       onLoginSuccess();
     } else {
       errEl.textContent = data.message || t("loginError");
@@ -1297,19 +1374,90 @@ function doLogin() {
   });
 }
 
+/* =========================================================
+   FULLSCREEN SPLASH HELPERS
+   ========================================================= */
+function showWelcomeSplash(userName, onDone) {
+  const splash = document.getElementById("welcomeSplash");
+  document.getElementById("splashName").textContent = userName;
+  document.getElementById("splashSub").textContent = "Getting your workspace ready…";
+  splash.classList.remove("hidden", "fade-out");
+
+  // After 1.8s fade out and call onDone
+  setTimeout(() => {
+    splash.classList.add("fade-out");
+    setTimeout(() => {
+      splash.classList.add("hidden");
+      splash.classList.remove("fade-out");
+      onDone();
+    }, 400);
+  }, 1800);
+}
+
+function showSaveSplash(onDone) {
+  const splash = document.getElementById("saveSplash");
+  const content = document.getElementById("saveSplashContent");
+  // Reset to connecting state
+  content.innerHTML = `
+    <div class="splash-hi save-connecting">Connecting to backend…</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  `;
+  splash.classList.remove("hidden", "fade-out", "splash-success-bg");
+  // onDone is called when the save actually completes - then we show tick
+  return {
+    success() {
+      splash.classList.add("splash-success-bg");
+      content.innerHTML = `
+        <div class="splash-tick">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="splash-tick-label">Saved!</div>
+      `;
+      setTimeout(() => {
+        splash.classList.add("fade-out");
+        setTimeout(() => {
+          splash.classList.add("hidden");
+          splash.classList.remove("fade-out", "splash-success-bg");
+          onDone();
+        }, 400);
+      }, 1000);
+    },
+    hide() {
+      splash.classList.add("hidden");
+      splash.classList.remove("fade-out", "splash-success-bg");
+    }
+  };
+}
+
+
 function onLoginSuccess() {
-  document.getElementById("loginScreen").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
   const letter = (currentUser[0] || "U").toUpperCase();
   document.getElementById("topAvatar").textContent = letter;
   document.getElementById("drawerAvatar").textContent = letter;
   document.getElementById("drawerName").textContent = currentUser;
   document.getElementById("drawerAdminBadge").classList.toggle("hidden", !isAdmin);
   document.getElementById("formReporter").textContent = currentUser;
-
   buildFormDropdowns();
-  loadTabData("me");
-  startAutoRefresh();
+
+  // Show fullscreen welcome splash
+  showWelcomeSplash(currentUser, () => {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+
+    // Hydrate with prefetched data (already in flight since auth succeeded)
+    Promise.all([_prefetchMePromise, _prefetchEveryonePromise, _prefetchFixedPromise])
+      .then(([meData, evData, fixData]) => {
+        if (meData && meData.status === "ok") dataMe = (meData.rows || []).map(mapRow);
+        if (evData && evData.status === "ok") dataEveryone = (evData.rows || []).map(mapRow);
+        if (fixData && fixData.status === "ok") dataFixed = (fixData.rows || []).map(mapRow);
+        rebuildSearchCache();
+        renderActiveList();
+      }).catch(() => {
+        loadTabData("me");
+      });
+
+    startAutoRefresh();
+  });
 }
 
 /* =========================================================
@@ -1331,11 +1479,38 @@ function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".nav-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".tab-page").forEach(p => p.classList.toggle("active", p.id === "page-" + tab));
-  // Reset rendered set so full render fires on tab switch
-  if (tab === "me") { renderedIds.me.clear(); document.getElementById("list-me").innerHTML = ""; }
-  else if (tab === "everyone") { renderedIds.everyone.clear(); document.getElementById("list-everyone").innerHTML = ""; }
-  else if (tab === "fixed") { renderedIds.fixed.clear(); document.getElementById("list-fixed").innerHTML = ""; }
-  loadTabData(tab);
+
+  // Render cached data immediately (no wait, no flicker)
+  if (tab === "me") {
+    const el = document.getElementById("list-me");
+    if (dataMe.length) {
+      renderedIds.me.clear(); el.innerHTML = "";
+      fullRenderList(el, dataMe, "me");
+    } else {
+      renderedIds.me.clear(); el.innerHTML = "";
+      loadTabData("me");
+    }
+  } else if (tab === "everyone") {
+    const el = document.getElementById("list-everyone");
+    if (dataEveryone.length) {
+      renderedIds.everyone.clear(); el.innerHTML = "";
+      fullRenderList(el, dataEveryone, "everyone");
+    } else {
+      renderedIds.everyone.clear(); el.innerHTML = "";
+      loadTabData("everyone");
+    }
+  } else if (tab === "fixed") {
+    const el = document.getElementById("list-fixed");
+    if (dataFixed.length) {
+      renderedIds.fixed.clear(); el.innerHTML = "";
+      fullRenderList(el, dataFixed.slice(0, 20), "fixed", { fixed: true });
+    } else {
+      renderedIds.fixed.clear(); el.innerHTML = "";
+      loadTabData("fixed");
+    }
+  } else if (tab === "search") {
+    renderSearch();
+  }
 }
 
 function mapRow(row) {
@@ -2054,7 +2229,8 @@ function submitObservation() {
     risk: formState.risk
   };
 
-  showLoading(true);
+  showLoading(false); // ensure old overlay hidden
+  const saveSplashCtrl = showSaveSplash(() => {});
   // Upload photos to Cloudinary first, then POST to Apps Script
   Promise.all(formPhotos.map(dataUrl => {
     if (dataUrl.startsWith("http")) return Promise.resolve(dataUrl); // already uploaded
@@ -2086,15 +2262,20 @@ function submitObservation() {
     return fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(postPayload)
+      body: JSON.stringify(postPayload),
+      redirect: "follow"
     });
   })
-  .then(r => r.json())
+  .then(r => {
+    // Apps Script may return text or JSON; handle both
+    return r.text().then(text => {
+      try { return JSON.parse(text); } catch(e) { return { status: "ok" }; }
+    });
+  })
   .then(data => {
-    showLoading(false);
     if (data.status === "ok") {
-      closeSheet(formSheet, formOverlay);
-      showToast(t("saved"), "success");
+      // Show success tick, then close form
+      saveSplashCtrl.success();
 
       // Build optimistic object from form data
       const now = new Date();
@@ -2123,8 +2304,11 @@ function submitObservation() {
       dataEveryone.unshift(optimisticObs);
       rebuildSearchCache();
 
-      // Render immediately — diff will inject just this one card
-      if (activeTab === "me" || activeTab === "everyone") renderActiveList();
+      // Close form after splash tick (1 sec)
+      setTimeout(() => {
+        closeSheet(formSheet, formOverlay);
+        if (activeTab === "me" || activeTab === "everyone") renderActiveList();
+      }, 1100);
 
       // Then do real server sync to replace optimistic with real data
       setTimeout(() => {
@@ -2132,11 +2316,12 @@ function submitObservation() {
         silentRefreshTab("everyone");
       }, 2000);
     } else {
+      saveSplashCtrl.hide();
       showToast("Save failed: " + (data.message || "Unknown error"), "error");
     }
   })
   .catch(() => {
-    showLoading(false);
+    saveSplashCtrl.hide();
     showToast("Network error. Please try again.", "error");
   });
 }
@@ -2292,6 +2477,11 @@ function sendChat() {
   });
 }
 
+// AI send button click
+document.getElementById("chatSend").addEventListener("click", sendChat);
+// Enter key sends too
+document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+
 // Scroll chat to bottom when keyboard opens on mobile
 document.getElementById("chatInput").addEventListener("focus", () => {
   setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 350);
@@ -2350,8 +2540,18 @@ function stopAutoRefresh() {
 /* =========================================================
    INIT
    ========================================================= */
+// Auto-detect system dark/light theme
+isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+darkToggle.checked = isDark;
 setLanguage("en");
 applyTheme();
+
+// Update theme in real time if user changes system preference
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
+  isDark = e.matches;
+  darkToggle.checked = isDark;
+  applyTheme();
+});
 
 /* =========================================================
    PWA SERVICE WORKER REGISTRATION
