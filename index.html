@@ -760,6 +760,95 @@
 
   .success-screen { text-align: center; padding: 60px 20px; }
   .success-check { width: 80px; height: 80px; border-radius: 50%; background: var(--minor); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #fff; }
+
+  /* ============ ABOUT PAGE ============ */
+  #aboutSheet {
+    z-index: 80;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .about-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(env(safe-area-inset-top, 0px) + 32px) 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .about-logo-wrap {
+    width: 100%;
+    max-width: 480px;
+    align-self: center;
+    margin: 0 0 28px;
+  }
+  .about-logo {
+    width: 100%;
+    height: auto;
+    border-radius: 18px;
+    display: block;
+    object-fit: cover;
+  }
+  .about-logo-placeholder {
+    display: none;
+    width: 100%;
+    aspect-ratio: 16/7;
+    border-radius: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .about-heading {
+    font-size: 28px;
+    font-weight: 800;
+    text-align: left;
+    margin: 0 0 14px;
+    color: var(--text);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .about-desc {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+    text-align: left;
+    margin: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .about-footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px calc(env(safe-area-inset-bottom, 0px) + 16px);
+    background: var(--bg);
+  }
+  .about-ok-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius-input);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .about-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .about-sep {
+    opacity: 0.5;
+  }
 </style>
 </head>
 <body>
@@ -904,6 +993,12 @@
     <div class="dr-left">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 6V3M5 9H2M22 9h-3M5 16H2M22 16h-3M8 9 5 6M16 9l3-3"/></svg>
       <span data-i18n="reportIssue">Report an Issue</span>
+    </div>
+  </div>
+  <div class="drawer-row" id="aboutRow">
+    <div class="dr-left">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-linecap="round" stroke-width="2.5"/><line x1="12" y1="12" x2="12" y2="17"/></svg>
+      <span data-i18n="about">About</span>
     </div>
   </div>
   <div class="drawer-row danger" id="logoutRow">
@@ -1051,6 +1146,32 @@
     <textarea class="text-input" rows="4" id="bugInput" data-i18n-ph="describeIssue" placeholder="Describe the issue..."></textarea>
     <button class="btn-confirm" id="bugSubmit" style="width:100%;margin-top:12px" data-i18n="submit">Submit</button>
     <button class="btn-secondary" id="bugCancel" data-i18n="cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ ABOUT PAGE ============ -->
+<div class="overlay-bg" id="aboutOverlay"></div>
+<div class="sheet fullscreen" id="aboutSheet">
+  <div class="about-scroll-area">
+    <div class="about-logo-wrap">
+      <img id="aboutLogo" src="about.png" alt="" class="about-logo"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div class="about-logo-placeholder">SBO Veda-3</div>
+    </div>
+    <h2 class="about-heading">SBO Veda-3 App</h2>
+    <p class="about-desc" data-i18n="aboutDesc">SBO Veda-3 is designed by the Continuous Improvement Department of PT. Alliance Consumer Products Indonesia to track safety behaviors and hazards. This app is used to report Unsafe Actions or Unsafe Conditions/Hazards in the workplace.</p>
+  </div>
+  <div class="about-footer">
+    <button class="btn-confirm about-ok-btn" id="aboutOk" data-i18n="ok">OK</button>
+    <div class="about-links">
+      <span data-i18n="terms">Terms</span>
+      <span class="about-sep">·</span>
+      <span data-i18n="privacy">Privacy</span>
+      <span class="about-sep">·</span>
+      <span data-i18n="licenses">Licenses</span>
+      <span class="about-sep">·</span>
+      <span>Version 1.000108</span>
+    </div>
   </div>
 </div>
 
@@ -1209,7 +1330,13 @@ const STRINGS = {
     submit: "Submit", issueSubmitted: "Issue reported. Thank you!",
     recommendationLabel: "Recommendation", locDetailsLabel: "Location Details",
     photos: "Photos", aiGreeting: "Hi! I'm Veda AI. I can help you with your safety observations. How can I assist you today?",
-    askVeda: "Ask Veda AI...", loggingIn: "Logging in..."
+    askVeda: "Ask Veda AI...", loggingIn: "Logging in...",
+    about: "About",
+    aboutDesc: "SBO Veda-3 is designed by the Continuous Improvement Department of PT. Alliance Consumer Products Indonesia to track safety behaviors and hazards. This app is used to report Unsafe Actions or Unsafe Conditions/Hazards in the workplace.",
+    ok: "OK",
+    terms: "Terms",
+    privacy: "Privacy",
+    licenses: "Licenses"
   },
   id: {
     company: "PT. Alliance Consumer Products Indonesia",
@@ -1259,7 +1386,13 @@ const STRINGS = {
     submit: "Kirim", issueSubmitted: "Masalah dilaporkan. Terima kasih!",
     recommendationLabel: "Rekomendasi", locDetailsLabel: "Detail Lokasi",
     photos: "Foto", aiGreeting: "Hai! Saya Veda AI. Saya dapat membantu Anda dengan observasi keselamatan. Ada yang bisa saya bantu?",
-    askVeda: "Tanya Veda AI...", loggingIn: "Sedang masuk..."
+    askVeda: "Tanya Veda AI...", loggingIn: "Sedang masuk...",
+    about: "Tentang",
+    aboutDesc: "SBO Veda-3 dirancang oleh Departemen Continuous Improvement PT. Alliance Consumer Products Indonesia untuk memantau perilaku keselamatan dan bahaya di tempat kerja. Aplikasi ini digunakan untuk melaporkan Tindakan Tidak Aman atau Kondisi/Bahaya Tidak Aman.",
+    ok: "OK",
+    terms: "Ketentuan",
+    privacy: "Privasi",
+    licenses: "Lisensi"
   }
 };
 function t(key) { return (STRINGS[currentLang] && STRINGS[currentLang][key]) || key; }
@@ -1304,6 +1437,14 @@ const darkToggle = document.getElementById("darkToggle");
 function applyTheme() {
   document.documentElement.classList.toggle("light", !isDark);
   document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#0f0f0f" : "#f5f5f5");
+  // Update About page logo to match current theme
+  const _aLogo = document.getElementById("aboutLogo");
+  if (_aLogo) {
+    _aLogo.src = isDark ? "dark.png" : "about.png";
+    _aLogo.style.display = "";
+    const _ph = _aLogo.nextElementSibling;
+    if (_ph) _ph.style.display = "none";
+  }
 }
 darkToggle.addEventListener("change", () => { isDark = darkToggle.checked; applyTheme(); });
 
@@ -1946,6 +2087,31 @@ document.getElementById("menuBtn").addEventListener("click", () => { drawer.clas
 drawerOverlay.addEventListener("click", () => { drawer.classList.remove("show"); drawerOverlay.classList.remove("show"); });
 document.getElementById("logoutRow").addEventListener("click", logout);
 document.getElementById("reportIssueRow").addEventListener("click", () => { drawer.classList.remove("show"); drawerOverlay.classList.remove("show"); openSheet(bugSheet, bugOverlay); });
+
+/* =========================================================
+   ABOUT PAGE
+   ========================================================= */
+const aboutSheet = document.getElementById("aboutSheet");
+const aboutOverlay = document.getElementById("aboutOverlay");
+const aboutLogo = document.getElementById("aboutLogo");
+
+function updateAboutLogo() {
+  const src = isDark ? "dark.png" : "about.png";
+  aboutLogo.src = src;
+  // Reset error state — show img, hide placeholder — so new src gets a fresh try
+  aboutLogo.style.display = "";
+  const placeholder = aboutLogo.nextElementSibling;
+  if (placeholder) placeholder.style.display = "none";
+}
+
+document.getElementById("aboutRow").addEventListener("click", () => {
+  drawer.classList.remove("show");
+  drawerOverlay.classList.remove("show");
+  updateAboutLogo();
+  openSheet(aboutSheet, aboutOverlay);
+});
+document.getElementById("aboutOk").addEventListener("click", () => closeSheet(aboutSheet, aboutOverlay));
+aboutOverlay.addEventListener("click", () => closeSheet(aboutSheet, aboutOverlay));
 
 function logout() {
   stopAutoRefresh();
