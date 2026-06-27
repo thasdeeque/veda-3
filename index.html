@@ -291,34 +291,35 @@ html.light .topbar.scrolled { background:rgba(245,245,245,0.85); }
   box-sizing:border-box;
   will-change:transform;
 }
-/* True pill: radius = half the bar height (stadium shape). Flat fill,
-   floating shadow gives the lifted look without any blur cost. */
-/* Light mode: dark pill — charcoal glass */
+/* True pill: radius = half the bar height (stadium shape). Translucent
+   frosted-glass fill with heavy backdrop blur so content behind shows
+   through as a diffused haze. Floating shadow gives the lifted look. */
+/* Light mode: dark frosted glass — charcoal haze */
 .bottom-nav::before {
   content:'';
   position:absolute;
   inset:0;
-  background:rgba(18,18,20,0.78);
+  background:rgba(18,18,20,0.55);
   border-radius:999px;
-  backdrop-filter:blur(4px) saturate(1.6);
-  -webkit-backdrop-filter:blur(4px) saturate(1.6);
+  backdrop-filter:blur(28px) saturate(1.8) brightness(1.05);
+  -webkit-backdrop-filter:blur(28px) saturate(1.8) brightness(1.05);
   box-shadow:
-    0 1.5px 0 rgba(255,255,255,0.18) inset,
+    0 1.5px 0 rgba(255,255,255,0.22) inset,
     0 -1px 0 rgba(0,0,0,0.5) inset,
-    inset 0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 0 0 1px rgba(255,255,255,0.14),
     0 18px 56px rgba(0,0,0,0.45),
     0 6px 16px rgba(0,0,0,0.3);
-  transition:background 0.35s ease;
+  transition:background 0.35s ease, backdrop-filter 0.35s ease;
 }
-/* Dark mode: bright pill — luminous white glass */
+/* Dark mode: luminous frosted glass — translucent white haze over dark bg */
 html:not(.light) .bottom-nav::before {
-  background:rgba(255,255,255,0.78);
-  backdrop-filter:blur(4px) saturate(2.0) brightness(1.25);
-  -webkit-backdrop-filter:blur(4px) saturate(2.0) brightness(1.25);
+  background:rgba(255,255,255,0.32);
+  backdrop-filter:blur(28px) saturate(1.9) brightness(1.12);
+  -webkit-backdrop-filter:blur(28px) saturate(1.9) brightness(1.12);
   box-shadow:
-    0 1.5px 0 rgba(255,255,255,1) inset,
-    0 -1px 0 rgba(0,0,0,0.10) inset,
-    inset 0 0 0 1px rgba(255,255,255,0.4),
+    0 1.5px 0 rgba(255,255,255,0.38) inset,
+    0 -1px 0 rgba(0,0,0,0.18) inset,
+    inset 0 0 0 1px rgba(255,255,255,0.22),
     0 18px 56px rgba(0,0,0,0.5),
     0 6px 16px rgba(0,0,0,0.28);
 }
@@ -1337,6 +1338,49 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwedV9RbkfUiunD7E8di
 const CLOUDINARY_CLOUD = "ducpxsehd";
 const CLOUDINARY_PRESET = "ml_default";
 
+/* ── HAPTIC ENGINE (ported from SBO HI) ──────────────────────
+   Wraps navigator.vibrate with safe try/catch and an enabled flag.
+   Patterns: light/medium/heavy = single tap; nav = heavier tap;
+   success/warning/double/heartbeat = multi-pulse patterns. */
+const Haptic = {
+  enabled: true,
+  _v(pattern) {
+    if (!this.enabled) return;
+    try { navigator.vibrate && navigator.vibrate(pattern); } catch(e) {}
+  },
+  light()    { this._v(20); },
+  medium()   { this._v(20); },
+  heavy()    { this._v(20); },
+  nav()      { this._v(60); },
+  success()  { this._v([20, 30, 20]); },
+  warning()  { this._v([40, 30, 40]); },
+  double()   { this._v([20, 50, 20]); },
+  heartbeat(){ this._v([30, 100, 30]); }
+};
+
+/* ── SPLASH LETTER SPLIT (ported from SBO HI) ────────────────
+   Splits the welcome splash headline into per-letter <span>s with a
+   staggered animation-delay, producing a smooth letter-jumping
+   fade-in intro. Safe to call repeatedly — always rebuilds from the
+   element's current textContent. */
+function splitSplashLetters(el, baseDelay, step) {
+  if (!el) return;
+  baseDelay = baseDelay || 0;
+  step = step || 45;
+  const text = el.textContent;
+  const frag = document.createDocumentFragment();
+  Array.from(text).forEach((ch, i) => {
+    const span = document.createElement("span");
+    span.className = "splash-letter";
+    span.style.animationDelay = (baseDelay + i * step) + "ms";
+    span.textContent = ch === " " ? "\u00A0" : ch;
+    frag.appendChild(span);
+  });
+  el.innerHTML = "";
+  el.appendChild(frag);
+}
+
+
 /* ---------- GLOBAL STATE (no localStorage) ---------- */
 let currentUser = "";
 let sessionAdminPass = "";    // stored only for markFixed admin verification
@@ -1604,10 +1648,18 @@ function doLogin() {
   const pass = document.getElementById("loginPass").value;
   const errEl = document.getElementById("loginError");
   errEl.textContent = "";
-  if (!user || !pass) { errEl.textContent = t("fillFields"); return; }
+  if (!user || !pass) { errEl.textContent = t("fillFields"); Haptic.warning(); return; }
 
-  // Show splash IMMEDIATELY on button press — no blue loading screen
-  document.getElementById("splashName").textContent = user;
+  Haptic.medium();
+
+  // Show splash IMMEDIATELY on button press — no blue loading screen.
+  // Ported from SBO HI: split the "Hi, <user>" headline into per-letter
+  // spans for a smooth letter-jumping fade-in intro.
+  const splashHiEl = document.getElementById("splashHi");
+  if (splashHiEl) {
+    splashHiEl.textContent = (currentLang === "id" ? "Hai, " : "Hi, ") + user;
+    splitSplashLetters(splashHiEl, 0, 45);
+  }
   document.getElementById("splashSub").textContent = currentLang === "id"
     ? "Menyiapkan workspace kamu\u2026"
     : "Getting your workspace ready\u2026";
@@ -1621,6 +1673,7 @@ function doLogin() {
   .then(r => r.json())
   .then(data => {
     if (data.status === "ok") {
+      Haptic.success();
       currentUser = data.user || user;
       isAdmin = !!data.isAdmin;
       sessionAdminPass = isAdmin ? pass : "";
@@ -1628,11 +1681,13 @@ function doLogin() {
       onLoginSuccess();
     } else {
       // Auth failed — hide splash and show error
+      Haptic.warning();
       document.getElementById("welcomeSplash").classList.add("hidden");
       errEl.textContent = data.message || t("loginError");
     }
   })
   .catch(() => {
+    Haptic.warning();
     document.getElementById("welcomeSplash").classList.add("hidden");
     errEl.textContent = "Network error. Please try again.";
   });
@@ -2931,6 +2986,77 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
 }
+
+/* =========================================================
+   HAPTIC INTEGRATION (monkey-patch layer, non-destructive)
+   - Wraps showToast() to fire warning/success haptic on toasts.
+   - Adds global click listener (capture phase) so haptic fires
+     on every interactive element without modifying existing
+     handlers.
+   ========================================================= */
+(function () {
+  // 1. Wrap showToast for error/success feedback
+  if (typeof showToast === "function") {
+    const _origToast = showToast;
+    window.showToast = function (msg, type) {
+      try {
+        if (type === "error") Haptic.warning();
+        else if (type === "success") Haptic.success();
+      } catch (e) {}
+      return _origToast.apply(this, arguments);
+    };
+  }
+
+  // 2. Global click delegation (capture phase = fires BEFORE existing handlers)
+  document.addEventListener("click", function (e) {
+    const target = e.target.closest(
+      ".nav-tab, .fab, .ai-fab, .icon-btn, .btn-primary, .btn-confirm, " +
+      ".btn-cancel, .btn-danger, .btn-secondary, .btn-fixed, .btn-delete-obs, " +
+      ".sh-save, .drawer-row, .filter-opt, .risk-btn, .photo-add, .photo-thumb, " +
+      ".dropdown-trigger, .dropdown-option, .cm-opt, .cm-cancel, " +
+      ".iv-close, .iv-nav, .pw-toggle, .lang-toggle, .switch, " +
+      "#menuBtn, #addFab, #aiFab, #aiClose, #formCancel, #formSave, " +
+      "#photoAddBtn, #optCamera, #optGallery, #photoSrcCancel, " +
+      "#fixedCancel, #fixedNext, #deleteCancel, #deleteConfirm, " +
+      "#bugCancel, #bugSubmit, #aboutOk, #logoutRow, #reportIssueRow, #aboutRow"
+    );
+    if (!target) return;
+
+    try {
+      if (target.classList.contains("nav-tab")) {
+        Haptic.nav();
+      } else if (
+        target.classList.contains("btn-primary") ||
+        target.classList.contains("btn-confirm") ||
+        target.classList.contains("btn-danger") ||
+        target.classList.contains("fab") ||
+        target.classList.contains("ai-fab") ||
+        target.classList.contains("btn-delete-obs") ||
+        target.classList.contains("sh-save") ||
+        target.id === "logoutRow" ||
+        target.id === "formSave" ||
+        target.id === "deleteConfirm" ||
+        target.id === "fixedNext" ||
+        target.id === "bugSubmit"
+      ) {
+        Haptic.medium();
+      } else if (
+        target.classList.contains("btn-cancel") ||
+        target.classList.contains("cm-cancel") ||
+        target.classList.contains("iv-close") ||
+        target.classList.contains("iv-nav") ||
+        target.classList.contains("pw-toggle") ||
+        target.classList.contains("lang-toggle") ||
+        target.classList.contains("switch")
+      ) {
+        Haptic.light();
+      } else {
+        Haptic.light();
+      }
+    } catch (err) { /* haptic should never break a click */ }
+  }, true);
+})();
+
 </script>
 </body>
 </html>
